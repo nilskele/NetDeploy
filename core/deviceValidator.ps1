@@ -56,20 +56,22 @@ function Validate-Router {
     # OSPF
     #
     if ($Device.Routing.OSPF.Enabled) {
-
         Throw-IfNull $Device.Routing.OSPF.ProcessID "Router '$($Device.Hostname)': OSPF enabled but missing ProcessID"
 
         foreach ($net in $Device.Routing.OSPF.Networks) {
-            if (-not $net.Network -or -not $net.Mask -or -not $net.Area) {
-                throw "Router '$($Device.Hostname)': OSPF network statements must contain Network, Mask, Area."
+            # Accept entries that include Network + Area. Mask is optional in many examples.
+            if (-not $net.Network -or $net.Area -eq $null) {
+                throw "Router '$($Device.Hostname)': OSPF network statements must contain Network and Area."
             }
 
             if (-not (Test-ValidIP $net.Network)) {
                 throw "Router '$($Device.Hostname)': OSPF network invalid Network IP '$($net.Network)'"
             }
 
-            if (-not (Test-ValidIP $net.Mask)) {
-                throw "Router '$($Device.Hostname)': OSPF network invalid Mask '$($net.Mask)'"
+            if ($net.Mask) {
+                if (-not (Test-ValidIP $net.Mask)) {
+                    throw "Router '$($Device.Hostname)': OSPF network invalid Mask '$($net.Mask)'"
+                }
             }
         }
     }
@@ -81,8 +83,8 @@ function Validate-Router {
     if ($Device.DHCP.Enabled) {
 
         foreach ($pool in $Device.DHCP.Pools) {
-
-            foreach ($field in @("PoolName","Network","Mask")) {
+            # Accept 'Name' (used in examples) instead of legacy 'PoolName'
+            foreach ($field in @("Name","Network","Mask")) {
                 Throw-IfNull $pool.$field "Router '$($Device.Hostname)': DHCP pool missing '$field'"
             }
 
@@ -94,13 +96,17 @@ function Validate-Router {
                 throw "Router '$($Device.Hostname)': DHCP pool invalid subnet mask '$($pool.Mask)'"
             }
 
-            if (-not $pool.DNS -or $pool.DNS.Count -eq 0) {
-                throw "Router '$($Device.Hostname)': DHCP pool $($pool.PoolName) missing DNS servers"
+            # Accept DNSServers or DNS for backward compatibility
+            $dnsList = @()
+            if ($pool.DNSServers) { $dnsList = $pool.DNSServers } elseif ($pool.DNS) { $dnsList = $pool.DNS }
+
+            if (-not $dnsList -or $dnsList.Count -eq 0) {
+                throw "Router '$($Device.Hostname)': DHCP pool $($pool.Name) missing DNS servers"
             }
 
-            foreach ($dns in $pool.DNS) {
+            foreach ($dns in $dnsList) {
                 if (-not (Test-ValidIP $dns)) {
-                    throw "Router '$($Device.Hostname)': DHCP pool $($pool.PoolName) has invalid DNS IP '$dns'"
+                    throw "Router '$($Device.Hostname)': DHCP pool $($pool.Name) has invalid DNS IP '$dns'"
                 }
             }
         }
@@ -111,8 +117,24 @@ function Validate-Router {
     # DNS
     #
     if ($Device.DNS.Enabled) {
-        if (-not $Device.DNS.Domain) {
-            throw "Router '$($Device.Hostname)': DNS enabled but missing Domain"
+        # Accept either DomainName or Domain (examples use DomainName)
+        $dnsDomain = $Device.DNS.DomainName
+        if (-not $dnsDomain) { $dnsDomain = $Device.DNS.Domain }
+
+        if (-not $dnsDomain) {
+            throw "Router '$($Device.Hostname)': DNS enabled but missing DomainName/Domain"
+        }
+
+        # Require list of DNS servers (DNSServers)
+        $dnsServers = $Device.DNS.DNSServers
+        if (-not $dnsServers -or $dnsServers.Count -eq 0) {
+            throw "Router '$($Device.Hostname)': DNS enabled but missing DNSServers"
+        }
+
+        foreach ($dns in $dnsServers) {
+            if (-not (Test-ValidIP $dns)) {
+                throw "Router '$($Device.Hostname)': DNS has invalid server IP '$dns'"
+            }
         }
     }
 
@@ -122,17 +144,22 @@ function Validate-Router {
     #
     if ($Device.NAT.Enabled) {
 
-        if (-not $Device.NAT.InsideInterfaces) {
+        # Accept either singular InsideInterface/OutsideInterface or arrays InsideInterfaces/OutsideInterfaces
+        if (-not $Device.NAT.InsideInterfaces -and -not $Device.NAT.InsideInterface) {
             throw "Router '$($Device.Hostname)': NAT enabled but no inside interfaces defined"
         }
-        if (-not $Device.NAT.OutsideInterfaces) {
+        if (-not $Device.NAT.OutsideInterfaces -and -not $Device.NAT.OutsideInterface) {
             throw "Router '$($Device.Hostname)': NAT enabled but no outside interfaces defined"
         }
 
-        # Static NAT checks
+        # Static NAT checks - accept both Inside/Outside and InsideLocal/InsideGlobal naming
         foreach ($rule in $Device.NAT.Static) {
-            if (-not (Test-ValidIP $rule.Inside)) { throw "Router '$($Device.Hostname)': Invalid static NAT inside IP '$($rule.Inside)'" }
-            if (-not (Test-ValidIP $rule.Outside)) { throw "Router '$($Device.Hostname)': Invalid static NAT outside IP '$($rule.Outside)'" }
+            $inside = $null; $outside = $null
+            if ($rule.InsideLocal) { $inside = $rule.InsideLocal } elseif ($rule.Inside) { $inside = $rule.Inside }
+            if ($rule.InsideGlobal) { $outside = $rule.InsideGlobal } elseif ($rule.Outside) { $outside = $rule.Outside }
+
+            if (-not (Test-ValidIP $inside)) { throw "Router '$($Device.Hostname)': Invalid static NAT inside IP '$inside'" }
+            if (-not (Test-ValidIP $outside)) { throw "Router '$($Device.Hostname)': Invalid static NAT outside IP '$outside'" }
         }
     }
 

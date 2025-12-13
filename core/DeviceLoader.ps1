@@ -9,7 +9,16 @@
     Does NOT validate correctness — DeviceValidator.ps1 handles that.
 #>
 
-. "$PSScriptRoot/Utils.ps1"
+. "$PSScriptRoot/Utils.ps1"  # fallback for legacy context
+
+# Robustly dot-source Utils.ps1 relative to this script file
+$__nd_scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$__nd_utils = Join-Path $__nd_scriptRoot 'Utils.ps1'
+if (Test-Path $__nd_utils) {
+    . (Resolve-Path $__nd_utils).Path
+} else {
+    Write-Verbose "DeviceLoader: Utils.ps1 not found at $__nd_utils"
+}
 
 
 # -------------------------------------------------------
@@ -39,10 +48,13 @@ $Global:DefaultRouterSchema = @{
 
     NAT = @{
         Enabled = $false
+        InsideInterface = ""
+        OutsideInterface = ""
         InsideInterfaces = @()
         OutsideInterfaces = @()
+        PAT = @{ Enabled = $false; ACLNumber = $null }
         Static = @()
-        DynamicPools = @()
+        Pools = @()
     }
 
     DHCP = @{
@@ -52,8 +64,10 @@ $Global:DefaultRouterSchema = @{
 
     DNS = @{
         Enabled = $false
+        DomainName = ""
         Domain = ""
-        Records = @()
+        DNSServers = @()
+        Hosts = @()
     }
 
     ACLs = @()
@@ -92,6 +106,13 @@ $Global:DefaultSwitchSchema = @{
 $Global:DefaultHostSchema = @{
     Hostname = ""
     DeviceType = "Host"
+
+    ManagementIP = ""
+
+    Credentials = @{
+        Username = ""
+        Password = ""
+    }
 
     IP = ""
     Mask = ""
@@ -157,6 +178,19 @@ function Load-DeviceConfig {
     $raw = Import-SafePSData -Path $absPath
     if (-not $raw) {
         throw "Device config failed to load: $absPath"
+    }
+
+    # -------------------------
+    # Normalize common legacy/variant keys so validators/builders work
+    # -------------------------
+    # Host files sometimes use 'IPAddress' instead of 'IP'
+    if ($raw.PSObject.Properties.Name -contains 'IPAddress' -and -not ($raw.PSObject.Properties.Name -contains 'IP')) {
+        $raw.IP = $raw.IPAddress
+    }
+
+    # DHCP/host DNS lists sometimes use DNSServers vs DNS
+    if ($raw.PSObject.Properties.Name -contains 'DNSServers' -and -not ($raw.PSObject.Properties.Name -contains 'DNS')) {
+        $raw.DNS = $raw.DNSServers
     }
 
     if (-not $raw.DeviceType) {

@@ -1,19 +1,32 @@
 @{
-    Hostname="SW2"
-    DeviceType="Switch"
-    ManagementIP="192.168.1.12"
-    SSHPort=22
+    Hostname     = "S2"
+    DeviceType   = "Switch"
+    ManagementIP = "192.168.1.12"
+    SSHPort      = 22
 
-    Credentials=@{ Username="admin"; Password="admin123" }
+    Credentials = @{
+        Username = "admin"
+        Password = "cisco123"
+    }
 
-    VLANs=@(@{ ID=1; Name="Default" }, @{ ID=20; Name="Servers" })
-    Interfaces=@(
-        @{ Name="G1/0"; Mode="access"; VLAN=20; Description="SRV1"; Status="up"; TrunkAllowed=@() },
-        @{ Name="G1/1"; Mode="trunk"; VLAN=1; Description="Uplink to R2"; Status="up"; TrunkAllowed=@("1","20") }
+    VLANs = @(
+        @{ ID = 1; Name = "Default" },
+        @{ ID = 10; Name = "LAN1" }
     )
-    EtherChannel=@{ Enabled=$false; ID=1; Mode="active"; Interfaces=@() }
-    SVIs=@()
-    ACLs=@()
-    STP=@{ Mode="pvst"; Priority=32768 }
-    DHCPRelay=@{ Enabled=$false; RelayIPs=@() }
+
+    Interfaces = @(
+        @{ Name = "GigabitEthernet0/1"; Mode = "access"; VLAN = 10; TrunkAllowed = @(); Description = "H3"; Status = "up" },
+        @{ Name = "GigabitEthernet0/24"; Mode = "trunk"; VLAN = 0; TrunkAllowed = @(10); Description = "Uplink to S1"; Status = "up" }
+    )
+
+    EtherChannel = @{ Enabled = $false; ID = 1; Mode = "active"; Interfaces = @() }
+
+    SVIs = @(
+        @{ VLAN = 10; IP = "10.0.0.253"; Mask = "255.255.255.0" }
+    )
+
+    ACLs = @()
+    STP  = @{ Mode = "pvst"; Priority = 32768 }
+    DHCPRelay = @{ Enabled = $true; RelayIPs = @("10.0.0.1") }
+    Logging   = @{ Enabled = $true; Host = "192.168.100.20" }
 }

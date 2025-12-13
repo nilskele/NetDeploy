@@ -11,7 +11,10 @@
 
     FunctionsToExport = @(
         'Invoke-DeviceDeployment',
-        'Invoke-AllDeviceDeployment'
+        'Invoke-AllDeviceDeployment',
+        'Load-Devices',
+        'Test-AllDevices',
+        'Backup-DeviceConfig'
     )
 
     CmdletsToExport   = @()
@@ -20,9 +23,9 @@
 
     FileList = @(
         'NetDeploy.psm1',
-        'Utils.ps1',
-        'DeviceLoader.ps1',
-        'DeviceValidator.ps1',
+        'core/Utils.ps1',
+        'core/DeviceLoader.ps1',
+        'core/deviceValidator.ps1',
         'CommandBuilder.ps1',
         'SSHDeploy.ps1'
     )

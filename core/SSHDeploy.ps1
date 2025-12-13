@@ -61,6 +61,58 @@ function Connect-SSH {
     return $null
 }
 
+
+# -------------------------
+# Backup running-config helper
+# -------------------------
+function Backup-DeviceConfig {
+    param(
+        [Parameter(Mandatory)][object]$Device,
+        [int]$Timeout = 30,
+        [switch]$DryRun
+    )
+
+    Write-Log "Backing up running-config for $($Device.Hostname)" -Level INFO
+
+    # Determine repository/module root (parent of core/)
+    $moduleRoot = Split-Path $PSScriptRoot -Parent
+    $bakDir = Join-Path $moduleRoot 'logs'
+    $bakDir = Join-Path $bakDir 'backups'
+
+    # Ensure backup directory exists (idempotent)
+    if (-not (Test-Path $bakDir)) {
+        New-Item -ItemType Directory -Path $bakDir -Force | Out-Null
+    }
+
+    $file = Join-Path $bakDir ("$($Device.Hostname)-$(Get-Date -Format yyyyMMdd-HHmmss).cfg")
+
+    if ($DryRun) {
+        Write-Log "DRY-RUN: would save backup to $file" -Level INFO
+        return $file
+    }
+
+    $session = Connect-SSH -DeviceHost $Device.ManagementIP -Username $Device.Credentials.Username -Password $Device.Credentials.Password -Port $Device.SSHPort -Timeout $Timeout
+    if (-not $session) {
+        Write-Log "Backup skipped: SSH connection failed for $($Device.Hostname)" -Level WARN
+        return $null
+    }
+
+    try {
+        $output = Invoke-SSHCommand -SessionId $session.SessionId -Command 'show running-config'
+        $text = if ($output.Output) { $output.Output -join "`n" } else { "" }
+
+        $text | Out-File -FilePath $file -Encoding UTF8
+
+        Write-Log "Backup saved: $file" -Level INFO
+        return $file
+    } catch {
+        Write-Log "Error during backup for $($Device.Hostname): $_" -Level ERROR
+        return $null
+    } finally {
+        if ($session) { Remove-SSHSession -SessionId $session.SessionId }
+    }
+}
+
 # -------------------------
 # Run commands on device
 # -------------------------
@@ -98,12 +150,32 @@ function Invoke-SSHCommands {
 function Deploy-Device {
     param(
         [Parameter(Mandatory)] $Device,
-        [int]$CommandDelay = 0
+        [int]$CommandDelay = 0,
+        [switch]$DryRun
     )
 
     Write-Log "Starting deployment for $($Device.Hostname)" -Level INFO
 
     $cmds = Build-Commands -Device $Device
+
+    # Always attempt to backup the current running-config before making changes.
+    # In DryRun mode the backup call will only return the intended backup path.
+    try {
+        $backupResult = Backup-DeviceConfig -Device $Device -Timeout 30 -DryRun:$DryRun
+        if (-not $backupResult) {
+            Write-Log "Backup failed for $($Device.Hostname). Aborting deployment to avoid pushing without a backup." -Level ERROR
+            return
+        }
+        Write-Log "Backup result: $backupResult" -Level INFO
+    } catch {
+        Write-Log "Exception during backup for $($Device.Hostname): $_. Aborting deployment." -Level ERROR
+        return
+    }
+
+    if ($DryRun) {
+        Write-Log "DRY-RUN: Commands for $($Device.Hostname):`n$($cmds -join "`n")" -Level INFO
+        return $cmds
+    }
 
     $session = Connect-SSH -DeviceHost $Device.ManagementIP `
         -Username $Device.Credentials.Username `
@@ -151,7 +223,8 @@ function Deploy-AllDevices {
     param(
         [Parameter(Mandatory)][array]$Devices,
         [int]$CommandDelay = 0,
-        [switch]$Parallel
+        [switch]$Parallel,
+        [switch]$DryRun
     )
 
     if ($Parallel) {
@@ -173,7 +246,7 @@ function Deploy-AllDevices {
         $jobs | Remove-Job
     } else {
         foreach ($dev in $Devices) {
-            Deploy-Device -Device $dev -CommandDelay $CommandDelay
+            Deploy-Device -Device $dev -CommandDelay $CommandDelay -DryRun:$DryRun
         }
     }
 }
