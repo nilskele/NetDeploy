@@ -27,7 +27,7 @@ Prerequisites
 - PowerShell 7.x (or Windows PowerShell where appropriate).
 - `Posh-SSH` for live SSH operations: `Install-Module -Name Posh-SSH -Scope CurrentUser`.
 
-A. Testing safely with DryRun (recommended for grading)
+A. Testing safely with DryRun 
 
 1) Import the module and confirm exported functions
 ```powershell
