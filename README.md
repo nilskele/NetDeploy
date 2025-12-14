@@ -20,6 +20,94 @@ This README includes a research-backed References section that links to document
 - `core/SSHDeploy.ps1` — backup and deployment over SSH (Posh-SSH).
 - `tui/` — simple console UI to select and deploy devices.
 
+## Usage
+This section explains how to run and test the project safely (DryRun) and how to use the interactive TUI to perform live deployments.
+
+Prerequisites
+- PowerShell 7.x (or Windows PowerShell where appropriate).
+- `Posh-SSH` for live SSH operations: `Install-Module -Name Posh-SSH -Scope CurrentUser`.
+
+A. Testing safely with DryRun (recommended for grading)
+
+1) Import the module and confirm exported functions
+```powershell
+Import-Module -Force ./NetDeploy.psd1 -Verbose
+Get-Command -Module NetDeploy | Where-Object CommandType -eq 'Function'
+```
+
+2) Load device configurations and pick a device
+```powershell
+$devices = Load-Devices -Path ./configs/devices
+$devices | Select-Object Hostname, ManagementIP, @{Name='HasCreds';Expression={$_.Credentials -ne $null}}
+$d = $devices | Where-Object Hostname -eq 'R1'   # or pick another hostname
+```
+
+3) Run a DryRun (NO SSH, safe)
+```powershell
+Invoke-DeviceDeployment -Device $d -DryRun -Verbose
+```
+
+What DryRun does and expected output
+- DryRun will simulate the workflow and print what would happen without opening SSH connections or writing backup files.
+- Example DryRun output (approximate):
+
+```
+VERBOSE: Loading module from path '/full/path/NetDeploy.psd1'.
+[INFO] Loading device configuration: ./configs/devices/R1.psd1
+Running DRY-RUN for device: R1 (192.0.2.1)
+[INFO] Backing up running-config for R1
+DRY-RUN: would save backup to /full/path/logs/backups/R1-20251214-123456.cfg
+DRY-RUN: Commands for R1:
+configure terminal
+interface GigabitEthernet0/1
+ ip address 10.0.0.1 255.255.255.0
+ no shutdown
+exit
+write memory
+```
+
+- The function will also return the command list as the function result. Use DryRun to capture and inspect commands before running them live.
+
+Quick reproducible example (one-liner script)
+- I added `examples/quickDryRun.ps1` to automate the above steps. Run it from the repository root:
+```powershell
+pwsh ./examples/quickDryRun.ps1
+```
+
+B. Using the TUI for live workflows (interactive)
+
+Start the TUI (one command)
+```powershell
+pwsh ./tui/DeploymentUI.ps1
+```
+
+What the TUI does (interactive flow)
+- Loads device PSD1 files from `./configs/devices` and displays them in a menu.
+- You can select one or more devices and choose to Deploy.
+- On Deploy the UI will:
+  1. Attempt to backup the device's current running-config (saved to `logs/backups/`).
+  2. If backup succeeds, establish an SSH session and send the generated CLI commands to the device (Posh-SSH).
+
+Example TUI interaction (what you will see)
+- Menu of devices with Hostname and IP.
+- Prompt: `Select device(s)` → choose R1.
+- Prompt: `Confirm deploy? (Y/N)` → choose Y to proceed.
+- Logs will stream: backup step, SSH connect, commands sent, completion message.
+
+Safety notes for TUI and live runs
+- The TUI performs live deployments by default when you confirm a deploy. Use only lab/test devices and non-production credentials.
+- The UI attempts a backup first; if the backup fails the deployment for that device is aborted.
+- If you want to keep functions loaded into your current session, dot-source the UI:
+```powershell
+. ./tui/DeploymentUI.ps1
+```
+
+Important cautions
+- Always run DryRun first to inspect backup paths and commands.
+- `Invoke-AllDeviceDeployment -Parallel` spawns background jobs; the current implementation may not pass `-DryRun` into those jobs — avoid `-Parallel` for dry-run testing.
+- Device PSD1 files in this repo may contain plaintext credentials (lab mode). For production use SecretManagement (see References).
+- Running import/load/invoke in a single `pwsh -Command` string can hit PSD1 parsing issues if PSD1s contain unquoted timestamp tokens — run interactively or quote values.
+
 ## Research & References
 Below are curated links to documentation and resources relevant to the code in this repository. Each link includes a short note describing why it's relevant.
 
@@ -103,8 +191,7 @@ Below are curated links to documentation and resources relevant to the code in t
 	https://www.cisco.com/c/en/us/support/index.html
 	(Authoritative product documentation for IOS commands such as `show running-config`.)
 
-## Notes for teachers / reviewers
+## Notes 
 - This project was built as a learning/lab tool. Key research sources are linked above and were used to inform module structure, PSD1 usage, SSH/Posh-SSH usage, and recommendations to use SecretManagement for credentials.
 - For safety, the module includes a `-DryRun` option that previews backup paths and command lists without opening SSH connections.
 
-If you'd like a standalone `REFERENCES.md` or inline per-file references added to each core file, say the word and I will add them.
