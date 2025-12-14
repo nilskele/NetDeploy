@@ -4,7 +4,7 @@ NetDeploy is a small PowerShell-based network automation project designed to loa
 
 This README includes a research-backed References section that links to documentation and resources used while building this project — useful if you need to demonstrate the research behind the implementation.
 
-## How it works (high level)
+## How it works 
 - Device configs are stored as PSD1 files under `configs/devices/`.
 - `core/DeviceLoader.ps1` loads and normalizes PSD1 content into PowerShell objects.
 - `core/deviceValidator.ps1` validates device objects before deployment.
