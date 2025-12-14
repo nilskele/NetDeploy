@@ -21,177 +21,118 @@ This README includes a research-backed References section that links to document
 - `tui/` — simple console UI to select and deploy devices.
 
 ## Usage
-This section explains how to run and test the project safely (DryRun) and how to use the interactive TUI to perform live deployments.
+This section gives two step-by-step workflows: a safe non-interactive DryRun flow (recommended for testing/grading) and the interactive TUI flow for live deployments.
 
 Prerequisites
-- PowerShell 7.x (or Windows PowerShell where appropriate).
-- `Posh-SSH` for live SSH operations: `Install-Module -Name Posh-SSH -Scope CurrentUser`.
+- PowerShell 7.x (cross-platform `pwsh`) or Windows PowerShell where appropriate.
+- `Posh-SSH` for live SSH operations (only required for actual deployments):
+	```powershell
+	Install-Module -Name Posh-SSH -Scope CurrentUser
+	```
 
-A. Testing safely with DryRun (recommended for grading)
+A. Non-interactive DryRun (safe and recommended)
 
-1) Import the module and confirm exported functions
+This flow mirrors what the TUI does but runs step-by-step in your shell. DryRun will build the command list and show the intended backup path without opening SSH connections or writing files.
+
+1) Import the module (from the repo root)
 ```powershell
+# Option A: import the manifest (loads the module as-packaged)
 Import-Module -Force ./NetDeploy.psd1 -Verbose
-Get-Command -Module NetDeploy | Where-Object CommandType -eq 'Function'
+
+# Option B: import the module file directly while developing
+# Import-Module -Force ./NetDeploy.psm1 -Verbose
+
+# Verify exported functions (optional)
+Get-Command -Module NetDeploy -CommandType Function
 ```
 
-2) Load device configurations and pick a device
+2) Load device configurations
 ```powershell
+# Load all device PSD1 files (returns an array of PSCustomObject devices)
 $devices = Load-Devices -Path ./configs/devices
-$devices | Select-Object Hostname, ManagementIP, @{Name='HasCreds';Expression={$_.Credentials -ne $null}}
-$d = $devices | Where-Object Hostname -eq 'R1'   # or pick another hostname
+
+# Quick summary view
+$devices | Select-Object Hostname, DeviceType, ManagementIP, @{Name='HasCreds';Expression={$_.Credentials -ne $null}}
+
+# Pick a device by hostname (or use index from the list)
+$d = $devices | Where-Object Hostname -eq 'R1'
 ```
 
-3) Run a DryRun (NO SSH, safe)
+3) Run a DryRun for a single device
 ```powershell
+# DryRun previews backup path and commands; it does NOT perform SSH or write backup files.
 Invoke-DeviceDeployment -Device $d -DryRun -Verbose
 ```
 
-What DryRun does and expected output
-- DryRun will simulate the workflow and print what would happen without opening SSH connections or writing backup files.
-- Example DryRun output (approximate):
-
-```
-VERBOSE: Loading module from path '/full/path/NetDeploy.psd1'.
-[INFO] Loading device configuration: ./configs/devices/R1.psd1
-Running DRY-RUN for device: R1 (192.0.2.1)
-[INFO] Backing up running-config for R1
-DRY-RUN: would save backup to /full/path/logs/backups/R1-20251214-123456.cfg
-DRY-RUN: Commands for R1:
-configure terminal
-interface GigabitEthernet0/1
- ip address 10.0.0.1 255.255.255.0
- no shutdown
-exit
-write memory
-```
-
-- The function will also return the command list as the function result. Use DryRun to capture and inspect commands before running them live.
-
-Quick reproducible example (one-liner script)
-- I added `examples/quickDryRun.ps1` to automate the above steps. Run it from the repository root:
+4) DryRun all devices at once (non-interactive)
 ```powershell
-pwsh ./examples/quickDryRun.ps1
+$results = Deploy-AllDevices -Devices $devices -DryRun
+# Inspect per-host previews (backup path + commands)
+$results.GetEnumerator() | ForEach-Object {
+	$host = $_.Key; $obj = $_.Value
+	"=== $host ==="
+	"Backup: $($obj.BackupPath)"
+	($obj.Commands -join "`n")
+}
 ```
 
-B. Using the TUI for live workflows (interactive)
+Notes about DryRun
+- DryRun returns intended backup paths (typically under `logs/backups/`) and the full command list, but it does not modify devices or write files.
+- Use `ConvertTo-Json` if you want machine-readable output: `Invoke-DeviceDeployment -Device $d -DryRun | ConvertTo-Json -Depth 6`.
 
-Start the TUI (one command)
+B. Interactive TUI (live deployments)
+
+The TUI provides a simple console-driven flow to select devices and run deployments. The TUI calls the module's public APIs and will perform backups and SSH commands during deployments.
+
+1) Start the TUI from the repository root
 ```powershell
-pwsh ./tui/DeploymentUI.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./tui/DeploymentUI.ps1
 ```
 
-What the TUI does (interactive flow)
-- Loads device PSD1 files from `./configs/devices` and displays them in a menu.
-- You can select one or more devices and choose to Deploy.
-- On Deploy the UI will:
-  1. Attempt to backup the device's current running-config (saved to `logs/backups/`).
-  2. If backup succeeds, establish an SSH session and send the generated CLI commands to the device (Posh-SSH).
+2) What to expect in the TUI
+- On start the TUI will load `.psd1` files from `./configs/devices`.
+- The main menu shows two options: `Deploy devices` and `Exit`.
+- Choose `Deploy devices` to open the device selector. The selector lists `ALL DEVICES` followed by each device (Hostname + DeviceType). Select a device or ALL to continue.
 
-Example TUI interaction (what you will see)
-- Menu of devices with Hostname and IP.
-- Prompt: `Select device(s)` → choose R1.
-- Prompt: `Confirm deploy? (Y/N)` → choose Y to proceed.
-- Logs will stream: backup step, SSH connect, commands sent, completion message.
+3) Deploy flow inside the TUI (live)
+- After selecting devices the TUI calls `Invoke-AllDeviceDeployment -Devices <selection>`.
+- For each selected device the live flow attempts to:
+	1. Backup running-config to `logs/backups/<hostname>-<timestamp>.cfg` (if backup fails the device is skipped).
+	2. Open an SSH session using `Posh-SSH` and send the generated CLI commands.
 
-Safety notes for TUI and live runs
-- The TUI performs live deployments by default when you confirm a deploy. Use only lab/test devices and non-production credentials.
-- The UI attempts a backup first; if the backup fails the deployment for that device is aborted.
-- If you want to keep functions loaded into your current session, dot-source the UI:
-```powershell
-. ./tui/DeploymentUI.ps1
-```
+## Sources
 
-Important cautions
-- Always run DryRun first to inspect backup paths and commands.
-- `Invoke-AllDeviceDeployment -Parallel` spawns background jobs; the current implementation may not pass `-DryRun` into those jobs — avoid `-Parallel` for dry-run testing.
-- Device PSD1 files in this repo may contain plaintext credentials (lab mode). For production use SecretManagement (see References).
-- Running import/load/invoke in a single `pwsh -Command` string can hit PSD1 parsing issues if PSD1s contain unquoted timestamp tokens — run interactively or quote values.
-
-## Research & References
-Below are curated links to documentation and resources relevant to the code in this repository. Each link includes a short note describing why it's relevant.
-
-### PowerShell module & script module basics
-- How to write a module manifest (.psd1)
-	https://learn.microsoft.com/powershell/scripting/developer/module/how-to-write-a-module-manifest?view=powershell-7.3
-	(Explains `FunctionsToExport`, `FileList`, `RootModule` and other manifest fields used by `NetDeploy.psd1`.)
-- Writing a PowerShell script module (.psm1) and dot-sourcing internals
-	https://learn.microsoft.com/powershell/scripting/developer/module/writing-a-windows-powershell-script-module?view=powershell-7.3
-	(Guidance on organizing code into a `.psm1` and dot-sourcing helper scripts in `core/`.)
-- Export-ModuleMember
-	https://learn.microsoft.com/powershell/module/microsoft.powershell.core/export-modulemember?view=powershell-7.3
-	(Used to expose public functions such as `Invoke-DeviceDeployment` and `Backup-DeviceConfig`.)
-
-### PowerShell data files (PSD1) and configuration patterns
-- PSD1 data file format and usage
-	https://learn.microsoft.com/powershell/scripting/dev-cross-plat/about/about_data_files?view=powershell-7.3
-	(Reference for the PSD1 format used for device config files in `configs/devices/`.)
-- Parsing PSD1 configuration examples
-	https://learn.microsoft.com/powershell/scripting/samples/parsing-powershell-data-files?view=powershell-7.3
-	(Examples for safely loading and inspecting PSD1 files.)
-
-### SSH / Posh-SSH and remote command execution
-- Posh-SSH (GitHub)
+- Posh-SSH (GitHub):
 	https://github.com/darkoperator/Posh-SSH
-	(The repo for the Posh-SSH module; functions used include `New-SSHSession`, `Invoke-SSHCommand`, `Remove-SSHSession`.)
-- Posh-SSH (PowerShell Gallery)
-	https://www.powershellgallery.com/packages/Posh-SSH
-	(Package install instructions and version info.)
 
-### Credential management & secure strings
-- Everything about credentials (PSCredential / SecureString)
-	https://learn.microsoft.com/powershell/scripting/learn/deep-dives/everything-about-credentials?view=powershell-7.3
-	(Guidance on `PSCredential` objects and why storing plaintext in PSD1 is discouraged.)
-- ConvertTo-SecureString / PSCredential
-	https://learn.microsoft.com/powershell/module/microsoft.powershell.utility/convertto-securestring?view=powershell-7.3
-	(API docs used when creating credentials for SSH connections.)
+- Adam the Automator — practical PowerShell tutorials and module authoring guides.:
+	https://adamtheautomator.com
 
-### SecretManagement (recommended for production)
-- SecretManagement overview
-	https://learn.microsoft.com/powershell/scripting/learn/deep-dives/secret-management?view=powershell-7.3
-	(Recommended approach to store credentials/keys securely instead of plaintext PSD1.)
-- SecretManagement (PowerShell Gallery)
-	https://www.powershellgallery.com/packages/Microsoft.PowerShell.SecretManagement
+- Jeff Hicks — in-depth PowerShell articles and real-world examples:
+	https://jdhitsolutions.com
 
-### Testing, CI, and module quality
-- Pester — PowerShell testing framework
-	https://pester.dev/
-	(Use to add unit/integration tests for loader, validator, and DryRun behavior.)
-- CI for PowerShell modules (GitHub Actions guidance)
-	https://learn.microsoft.com/powershell/scripting/dev-cross-platform/ci-cd/github?view=powershell-7.3
-	(How to run Pester tests and linting in CI.)
-- PlatyPS — generate markdown help from comment-based help
-	https://github.com/platyPS/PlatyPS
-	(Useful for generating module documentation from in-code comment help.)
+- PowerShell.org - community articles, blog posts and long-form tutorials about advanced scripting and module design:
+	https://powershell.org
 
-### Concurrency and background jobs
-- Start-Job / passing args into ScriptBlock
-	https://learn.microsoft.com/powershell/module/microsoft.powershell.core/start-job?view=powershell-7.3
-	(Guidance relevant to the `-Parallel` branch in `Deploy-AllDevices`.)
+- Network to Code — network automation patterns, examples, and tutorials:
+	https://networktocode.com
 
-### I/O, path handling, logging
-- Join-Path / Resolve-Path (path handling)
-	https://learn.microsoft.com/powershell/module/microsoft.powershell.management/join-path?view=powershell-7.3
-- Out-File (writing backups)
-	https://learn.microsoft.com/powershell/module/microsoft.powershell.core/out-file?view=powershell-7.3
-- Logging guidance
-	https://learn.microsoft.com/powershell/scripting/learn/deep-dives/advanced-logging?view=powershell-7.3
+- David Bombal (YouTube) hands-on network lab videos including Cisco IOS examples and automation demos:
+	https://www.youtube.com/c/DavidBombal
 
-### PowerShell best practices & security
-- PowerShell security best-practices
-	https://learn.microsoft.com/powershell/scripting/learn/ps101/04-powershell-security?view=powershell-7.3
-- Effective PowerShell patterns
-	https://learn.microsoft.com/powershell/scripting/learn/deep-dives/effective-powershell?view=powershell-7.3
+- NetworkChuck (YouTube) network automation and lab tutorials that show building topologies and automating tasks:
+	https://www.youtube.com/c/NetworkChuck
 
-### Cisco / network automation references
-- Cisco DevNet (automation & APIs)
-	https://developer.cisco.com/
-	(Vendor resources for network automation, sample code, and APIs.)
-- Cisco product & IOS documentation
-	https://www.cisco.com/c/en/us/support/index.html
-	(Authoritative product documentation for IOS commands such as `show running-config`.)
+- Reddit communities:
+	r/PowerShell: https://www.reddit.com/r/PowerShell/
+	r/networking: https://www.reddit.com/r/networking/
 
-## Notes 
-- This project was built as a learning/lab tool. Key research sources are linked above and were used to inform module structure, PSD1 usage, SSH/Posh-SSH usage, and recommendations to use SecretManagement for credentials.
-- For safety, the module includes a `-DryRun` option that previews backup paths and command lists without opening SSH connections.
+- GitHub automation repos combining PowerShell with Posh-SSH:
+	https://github.com/search?q=posh-ssh+network+automation
+
+- Developer/blog:
+	Dev.to (PowerShell tag): https://dev.to/t/powershell
+	Medium (PowerShell topic): https://medium.com/tag/powershell
+
+
 
