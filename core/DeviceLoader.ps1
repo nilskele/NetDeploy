@@ -7,6 +7,9 @@
     attaches metadata, and outputs ready-to-validate device objects.
 
     Does NOT validate correctness — DeviceValidator.ps1 handles that.
+    Example usage:
+    $devices = Load-AllDevices -Folder 'configs/devices'
+    $device = Load-DeviceByName -Folder 'configs/devices' -Name 'R1'
 #>
 
 . "$PSScriptRoot/Utils.ps1"  # fallback for legacy context
