@@ -11,15 +11,37 @@
 # -------------------------------------
 #  GLOBALS: Logging Folder + Log File
 # -------------------------------------
+
+# Compute default script dir and default logs folder only if not already set by caller
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Global:NetDeployLogDir = Join-Path $ScriptDir "..\logs"
+if (-not (Get-Variable -Name NetDeployLogDir -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:NetDeployLogDir = Join-Path $ScriptDir "..\logs"
+}
 
 if (-not (Test-Path $Global:NetDeployLogDir)) {
     New-Item -ItemType Directory -Path $Global:NetDeployLogDir | Out-Null
 }
 
-$Global:NetDeployLogFile = Join-Path $Global:NetDeployLogDir "NetDeploy-$(Get-Date -Format yyyyMMdd).log"
+# Main log file (default) — allow override by setting $Global:NetDeployLogFile before loading
+if (-not (Get-Variable -Name NetDeployLogFile -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:NetDeployLogFile = Join-Path $Global:NetDeployLogDir "NetDeploy-$(Get-Date -Format yyyyMMdd).log"
+}
 
+# Directory for per-run/job logs
+if (-not (Get-Variable -Name NetDeployJobsDir -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:NetDeployJobsDir = Join-Path $Global:NetDeployLogDir 'jobs'
+}
+if (-not (Test-Path $Global:NetDeployJobsDir)) {
+    New-Item -ItemType Directory -Path $Global:NetDeployJobsDir | Out-Null
+}
+
+# Global variable to hold current job id and its log file when a run is active
+if (-not (Get-Variable -Name NetDeployJobId -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:NetDeployJobId = $null
+}
+if (-not (Get-Variable -Name NetDeployJobLogFile -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:NetDeployJobLogFile = $null
+}
 
 # -------------------------------------
 # Logging Function (Console + File)
@@ -36,12 +58,25 @@ function Write-Log {
     )
 
     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $formatted = "[$timestamp][$Level] $Message"
 
-    # Write to file
+    # If there's an active job id, include it in the message and prepare job log file
+    if ($Global:NetDeployJobId) {
+        $jobPrefix = "[Job:$Global:NetDeployJobId]"
+    } else {
+        $jobPrefix = ""
+    }
+
+    $formatted = "[$timestamp][$Level] $jobPrefix $Message"
+
+    # Always write to the main log file
     try {
         $formatted | Out-File -Append -FilePath $Global:NetDeployLogFile -Encoding UTF8
     } catch {}
+
+    # If a job log file is configured, write there as well
+    if ($Global:NetDeployJobLogFile) {
+        try { $formatted | Out-File -Append -FilePath $Global:NetDeployJobLogFile -Encoding UTF8 } catch {}
+    }
 
     # Console output
     if ($NoColor) {
@@ -55,6 +90,45 @@ function Write-Log {
         "ERROR" { Write-Host $formatted -ForegroundColor Red }
         "DEBUG" { Write-Host $formatted -ForegroundColor DarkGray }
     }
+}
+
+
+# -------------------------------------
+# Job-scoped logging helpers
+# -------------------------------------
+function New-LogJob {
+    param(
+        [string]$Name = $null
+    )
+
+    $id = (Get-Date).ToString('yyyyMMdd-HHmmss') + '-' + (New-RandomID -Digits 4)
+    if ($Name) { $safeName = ($Name -replace '[^a-zA-Z0-9_-]', '_') } else { $safeName = 'run' }
+
+    $Global:NetDeployJobId = $id
+    $Global:NetDeployJobLogFile = Join-Path $Global:NetDeployJobsDir ("{0}-{1}.log" -f $safeName, $id)
+
+    # Add header to main log and job log
+    $hdr = ("[{0}][INFO] [Job:{1}] START {2}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Global:NetDeployJobId, ($Name -or 'run'))
+    try { $hdr | Out-File -Append -FilePath $Global:NetDeployLogFile -Encoding UTF8 } catch {}
+    try { $hdr | Out-File -Append -FilePath $Global:NetDeployJobLogFile -Encoding UTF8 } catch {}
+
+    return $Global:NetDeployJobId
+}
+
+function Close-LogJob {
+    param(
+        [string]$Reason = $null
+    )
+
+    if (-not $Global:NetDeployJobId) { return }
+
+    $msg = ("[{0}][INFO] [Job:{1}] END {2}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Global:NetDeployJobId, ($Reason -or 'complete'))
+    try { $msg | Out-File -Append -FilePath $Global:NetDeployLogFile -Encoding UTF8 } catch {}
+    try { $msg | Out-File -Append -FilePath $Global:NetDeployJobLogFile -Encoding UTF8 } catch {}
+
+    # Clear globals
+    $Global:NetDeployJobId = $null
+    $Global:NetDeployJobLogFile = $null
 }
 
 

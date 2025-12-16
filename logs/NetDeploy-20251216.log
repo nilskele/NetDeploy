@@ -1,0 +1,468 @@
+[2025-12-16 17:15:45][INFO]  Loading device configurations from JSON file: /Users/nilskelecom/Documents/NetDeploy/configs/devices/devices.json
+[2025-12-16 17:15:45][INFO]  Loaded 10 device configurations from JSON
+[2025-12-16 17:16:27][INFO]  Validating device: R2
+[2025-12-16 17:16:27][DEBUG]  Validating router: R2
+[2025-12-16 17:16:27][INFO]  Router 'R2' validation OK
+[2025-12-16 17:16:27][DEBUG]  Validation complete: R2
+[2025-12-16 17:16:27][INFO]  Validating device: S2
+[2025-12-16 17:16:27][DEBUG]  Validating switch: S2
+[2025-12-16 17:16:27][INFO]  Switch 'S2' validation OK
+[2025-12-16 17:16:27][DEBUG]  Validation complete: S2
+[2025-12-16 17:16:27][INFO]  Validating device: S3
+[2025-12-16 17:16:27][DEBUG]  Validating switch: S3
+[2025-12-16 17:16:27][INFO]  Switch 'S3' validation OK
+[2025-12-16 17:16:27][DEBUG]  Validation complete: S3
+[2025-12-16 17:16:27][INFO]  Validating device: PC1
+[2025-12-16 17:16:27][DEBUG]  Validating host: PC1
+[2025-12-16 17:16:27][INFO]  Host 'PC1' validation OK
+[2025-12-16 17:16:27][DEBUG]  Validation complete: PC1
+[2025-12-16 17:16:27][INFO]  Validating device: PC2
+[2025-12-16 17:16:27][DEBUG]  Validating host: PC2
+[2025-12-16 17:16:27][INFO]  Host 'PC2' validation OK
+[2025-12-16 17:16:27][DEBUG]  Validation complete: PC2
+[2025-12-16 17:16:27][INFO]  All devices passed validation
+[2025-12-16 17:16:27][INFO] [Job:20251216-171627-8401] START True
+[2025-12-16 17:16:27][INFO] [Job:20251216-171627-8401] Starting batch 1: devices 1-5 of 5 (concurrency=10)
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Waiting for batch 1 jobs to finish...
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Starting deployment for R2
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Starting deployment for S2
+[2025-12-16 17:16:28][DEBUG] [Job:20251216-171627-8401] Building router commands for R2
+[2025-12-16 17:16:28][DEBUG] [Job:20251216-171627-8401] Building switch commands for S2
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backing up running-config for S2
+[2025-12-16 17:16:28][WARN] [Job:20251216-171627-8401] OSPF network entry missing fields on R2: 
+Network  Area
+-------  ----
+10.0.1.0    0
+
+
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Starting deployment for S3
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/S2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/S2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: Commands for S2:
+enable
+configure terminal
+no ip domain-lookup
+hostname S2
+vlan 1
+ name Default
+ exit
+vlan 10
+ name LAN1
+ exit
+interface GigabitEthernet0/1
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+ exit
+interface GigabitEthernet0/24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10
+ no shutdown
+ exit
+interface Vlan10
+ ip address 10.0.0.253 255.255.255.0
+ no shutdown
+ exit
+spanning-tree mode pvst
+spanning-tree vlan 1 priority 32768
+ip dhcp relay address 10.0.0.1
+end
+write memory
+[2025-12-16 17:16:28][WARN] [Job:20251216-171627-8401] OSPF network entry missing fields on R2: 
+Network       Area
+-------       ----
+192.168.100.0    0
+
+
+[2025-12-16 17:16:28][DEBUG] [Job:20251216-171627-8401] Building switch commands for S3
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backing up running-config for R2
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: Commands for R2:
+enable
+configure terminal
+no ip domain-lookup
+hostname R2
+interface GigabitEthernet0/0
+ description LAN
+ ip address 10.0.1.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description WAN
+ ip address 192.168.100.2 255.255.255.252
+ no shutdown
+ exit
+router ospf 1
+ exit
+end
+write memory
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backing up running-config for S3
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/S3-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Starting deployment for PC1
+lecom/Documents/NetDeploy/logs/backups/S3-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: Commands for S3:
+enable
+configure terminal
+no ip domain-lookup
+hostname S3
+vlan 1
+ name Default
+ exit
+vlan 20
+ name LAN2
+ exit
+interface GigabitEthernet0/1
+ switchport mode access
+ switchport access vlan 20
+ no shutdown
+ exit
+interface GigabitEthernet0/2
+ switchport mode access
+ switchport access vlan 20
+ no shutdown
+ exit
+interface GigabitEthernet0/24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 20
+ no shutdown
+ exit
+interface Vlan20
+ ip address 10.0.1.253 255.255.255.0
+ no shutdown
+ exit
+spanning-tree mode pvst
+spanning-tree vlan 1 priority 32768
+ip dhcp relay address 10.0.0.1
+end
+write memory
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Starting deployment for PC2
+[2025-12-16 17:16:28][DEBUG] [Job:20251216-171627-8401] Building host provisioning template for PC1
+[2025-12-16 17:16:28][DEBUG] [Job:20251216-171627-8401] Building host provisioning template for PC2
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backing up running-config for PC1
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/PC1-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backing up running-config for PC2
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/PC1-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/PC2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/PC2-20251216-171628.cfg
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: Commands for PC1:
+# Set static IP on host
+sudo ip addr add 10.0.0.10/24 dev eth0
+sudo ip route add default via 10.0.0.254
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] DRY-RUN: Commands for PC2:
+# Set static IP on host
+sudo ip addr add 10.0.0.11/24 dev eth0
+sudo ip route add default via 10.0.0.254
+[2025-12-16 17:16:28][INFO] [Job:20251216-171627-8401] END True
+[2025-12-16 17:31:03][INFO]  Loading device configurations from JSON file: /Users/nilskelecom/Documents/NetDeploy/configs/devices/devices.json
+[2025-12-16 17:31:03][INFO]  Loaded 10 device configurations from JSON
+[2025-12-16 17:34:02][INFO]  Loading device configurations from JSON file: /Users/nilskelecom/Documents/NetDeploy/configs/devices/devices.json
+[2025-12-16 17:34:02][INFO]  Loaded 10 device configurations from JSON
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] START True
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] Validating device: R1
+[2025-12-16 17:34:02][DEBUG] [Job:20251216-173402-2897] Validating router: R1
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] Router 'R1' validation OK
+[2025-12-16 17:34:02][DEBUG] [Job:20251216-173402-2897] Validation complete: R1
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] Starting deployment for R1
+[2025-12-16 17:34:02][DEBUG] [Job:20251216-173402-2897] Building router commands for R1
+[2025-12-16 17:34:02][WARN] [Job:20251216-173402-2897] OSPF network entry missing fields on R1: 
+Network  Area
+-------  ----
+10.0.0.0    0
+
+
+[2025-12-16 17:34:02][WARN] [Job:20251216-173402-2897] OSPF network entry missing fields on R1: 
+Network       Area
+-------       ----
+192.168.100.0    0
+
+
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] Backing up running-config for R1
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/R1-20251216-173402.cfg
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/R1-20251216-173402.cfg
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] DRY-RUN: Commands for R1:
+enable
+configure terminal
+no ip domain-lookup
+hostname R1
+interface GigabitEthernet0/0
+ description LAN
+ ip address 10.0.0.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description WAN
+ ip address 192.168.100.1 255.255.255.252
+ no shutdown
+ exit
+router ospf 1
+ exit
+interface GigabitEthernet0/0
+ ip nat inside
+ exit
+interface GigabitEthernet0/1
+ ip nat outside
+ exit
+ ip nat inside source list 10 interface GigabitEthernet0/1 overload
+ip dhcp excluded-address 10.0.0.1 10.0.0.2
+ip dhcp pool LAN_POOL
+ network 10.0.0.0 255.255.255.0
+ default-router 10.0.0.1
+ dns-server 10.0.0.1
+ domain-name example.local
+ exit
+ip domain-name example.local
+ip name-server 8.8.8.8
+ip host host1 10.0.0.10
+ip host host2 10.0.0.11
+ip host host3 10.0.0.12
+end
+write memory
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-2897] END True
+[2025-12-16 17:34:02][INFO]  Loading device configurations from JSON file: /Users/nilskelecom/Documents/NetDeploy/configs/devices/devices.json
+[2025-12-16 17:34:02][INFO]  Loaded 10 device configurations from JSON
+[2025-12-16 17:34:02][INFO]  Validating device: R1
+[2025-12-16 17:34:02][DEBUG]  Validating router: R1
+[2025-12-16 17:34:02][INFO]  Router 'R1' validation OK
+[2025-12-16 17:34:02][DEBUG]  Validation complete: R1
+[2025-12-16 17:34:02][INFO]  Validating device: R2
+[2025-12-16 17:34:02][DEBUG]  Validating router: R2
+[2025-12-16 17:34:02][INFO]  Router 'R2' validation OK
+[2025-12-16 17:34:02][DEBUG]  Validation complete: R2
+[2025-12-16 17:34:02][INFO]  Validating device: S1
+[2025-12-16 17:34:02][DEBUG]  Validating switch: S1
+[2025-12-16 17:34:02][INFO]  Switch 'S1' validation OK
+[2025-12-16 17:34:02][DEBUG]  Validation complete: S1
+[2025-12-16 17:34:02][INFO]  Validating device: S2
+[2025-12-16 17:34:02][DEBUG]  Validating switch: S2
+[2025-12-16 17:34:02][INFO]  Switch 'S2' validation OK
+[2025-12-16 17:34:02][DEBUG]  Validation complete: S2
+[2025-12-16 17:34:02][INFO]  All devices passed validation
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-8205] START True
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-8205] Starting batch 1: devices 1-4 of 4 (concurrency=10)
+[2025-12-16 17:34:02][INFO] [Job:20251216-173402-8205] Waiting for batch 1 jobs to finish...
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Starting deployment for R1
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Starting deployment for R2
+[2025-12-16 17:34:03][DEBUG] [Job:20251216-173402-8205] Building router commands for R1
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Starting deployment for S1
+[2025-12-16 17:34:03][DEBUG] [Job:20251216-173402-8205] Building router commands for R2
+[2025-12-16 17:34:03][DEBUG] [Job:20251216-173402-8205] Building switch commands for S1
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Starting deployment for S2
+[2025-12-16 17:34:03][WARN] [Job:20251216-173402-8205] OSPF network entry missing fields on R1: 
+Network  Area
+-------  ----
+10.0.0.0    0
+
+
+[2025-12-16 17:34:03][WARN] [Job:20251216-173402-8205] OSPF network entry missing fields on R1: 
+Network       Area
+-------       ----
+192.168.100.0    0
+
+
+[2025-12-16 17:34:03][DEBUG] [Job:20251216-173402-8205] Building switch commands for S2
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backing up running-config for S1
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/S1-20251216-173403.cfg
+[2025-12-16 17:34:03][WARN] [Job:20251216-173402-8205] OSPF network entry missing fields on R2: 
+Network  Area
+-------  ----
+10.0.1.0    0
+
+
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backing up running-config for R1
+/Documents/NetDeploy/logs/backups/S1-20251216-173403.cfg
+[2025-12-16 17:34:03][WARN] [Job:20251216-173402-8205] OSPF network entry missing fields on R2: 
+Network       Area
+-------       ----
+192.168.100.0    0
+
+
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: Commands for S1:
+enable
+configure terminal
+no ip domain-lookup
+hostname S1
+vlan 1
+ name Default
+ exit
+vlan 10
+ name LAN1
+ exit
+vlan 20
+ name LAN2
+ exit
+interface GigabitEthernet0/1
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+ exit
+interface GigabitEthernet0/2
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+ exit
+interface GigabitEthernet0/24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+ no shutdown
+ exit
+interface Vlan10
+ ip address 10.0.0.254 255.255.255.0
+ no shutdown
+ exit
+interface Vlan20
+ ip address 10.0.1.254 255.255.255.0
+ no shutdown
+ exit
+spanning-tree mode pvst
+spanning-tree vlan 1 priority 32768
+ip dhcp relay address 10.0.0.1
+end
+write memory
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/R1-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/R1-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: Commands for R1:
+enable
+configure terminal
+no ip domain-lookup
+hostname R1
+interface GigabitEthernet0/0
+ description LAN
+ ip address 10.0.0.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description WAN
+ ip address 192.168.100.1 255.255.255.252
+ no shutdown
+ exit
+router ospf 1
+ exit
+interface GigabitEthernet0/0
+ ip nat inside
+ exit
+interface GigabitEthernet0/1
+ ip nat outside
+ exit
+ ip nat inside source list 10 interface GigabitEthernet0/1 overload
+ip dhcp excluded-address 10.0.0.1 10.0.0.2
+ip dhcp pool LAN_POOL
+ network 10.0.0.0 255.255.255.0
+ default-router 10.0.0.1
+ dns-server 10.0.0.1
+ domain-name example.local
+ exit
+ip domain-name example.local
+ip name-server 8.8.8.8
+ip host host1 10.0.0.10
+ip host host2 10.0.0.11
+ip host host3 10.0.0.12
+end
+write memory
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backing up running-config for R2
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: Commands for R2:
+enable
+configure terminal
+no ip domain-lookup
+hostname R2
+interface GigabitEthernet0/0
+ description LAN
+ ip address 10.0.1.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description WAN
+ ip address 192.168.100.2 255.255.255.252
+ no shutdown
+ exit
+router ospf 1
+ exit
+end
+write memory
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backing up running-config for S2
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/S2-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/S2-20251216-173403.cfg
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] DRY-RUN: Commands for S2:
+enable
+configure terminal
+no ip domain-lookup
+hostname S2
+vlan 1
+ name Default
+ exit
+vlan 10
+ name LAN1
+ exit
+interface GigabitEthernet0/1
+ switchport mode access
+ switchport access vlan 10
+ no shutdown
+ exit
+interface GigabitEthernet0/24
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10
+ no shutdown
+ exit
+interface Vlan10
+ ip address 10.0.0.253 255.255.255.0
+ no shutdown
+ exit
+spanning-tree mode pvst
+spanning-tree vlan 1 priority 32768
+ip dhcp relay address 10.0.0.1
+end
+write memory
+[2025-12-16 17:34:03][INFO] [Job:20251216-173402-8205] END True
+[2025-12-16 17:34:19][INFO]  Loading device configurations from JSON file: /Users/nilskelecom/Documents/NetDeploy/configs/devices/devices.json
+[2025-12-16 17:34:19][INFO]  Loaded 10 device configurations from JSON
+[2025-12-16 17:35:17][INFO]  Validating device: R2
+[2025-12-16 17:35:17][DEBUG]  Validating router: R2
+[2025-12-16 17:35:17][INFO]  Router 'R2' validation OK
+[2025-12-16 17:35:17][DEBUG]  Validation complete: R2
+[2025-12-16 17:35:17][INFO]  All devices passed validation
+[2025-12-16 17:35:17][INFO] [Job:20251216-173517-9478] START True
+[2025-12-16 17:35:17][INFO] [Job:20251216-173517-9478] Starting batch 1: devices 1-1 of 1 (concurrency=10)
+[2025-12-16 17:35:17][INFO] [Job:20251216-173517-9478] Waiting for batch 1 jobs to finish...
+[2025-12-16 17:35:17][INFO] [Job:20251216-173517-9478] Starting deployment for R2
+[2025-12-16 17:35:17][DEBUG] [Job:20251216-173517-9478] Building router commands for R2
+[2025-12-16 17:35:18][WARN] [Job:20251216-173517-9478] OSPF network entry missing fields on R2: 
+Network  Area
+-------  ----
+10.0.1.0    0
+
+
+[2025-12-16 17:35:18][WARN] [Job:20251216-173517-9478] OSPF network entry missing fields on R2: 
+Network       Area
+-------       ----
+192.168.100.0    0
+
+
+[2025-12-16 17:35:18][INFO] [Job:20251216-173517-9478] Backing up running-config for R2
+[2025-12-16 17:35:18][INFO] [Job:20251216-173517-9478] DRY-RUN: would save backup to /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-173518.cfg
+[2025-12-16 17:35:18][INFO] [Job:20251216-173517-9478] Backup result: /Users/nilskelecom/Documents/NetDeploy/logs/backups/R2-20251216-173518.cfg
+[2025-12-16 17:35:18][INFO] [Job:20251216-173517-9478] DRY-RUN: Commands for R2:
+enable
+configure terminal
+no ip domain-lookup
+hostname R2
+interface GigabitEthernet0/0
+ description LAN
+ ip address 10.0.1.1 255.255.255.0
+ no shutdown
+ exit
+interface GigabitEthernet0/1
+ description WAN
+ ip address 192.168.100.2 255.255.255.252
+ no shutdown
+ exit
+router ospf 1
+ exit
+end
+write memory
+[2025-12-16 17:35:18][INFO] [Job:20251216-173517-9478] END True

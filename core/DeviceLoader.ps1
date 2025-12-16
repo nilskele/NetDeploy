@@ -131,23 +131,30 @@ $Global:DefaultHostSchema = @{
 function Merge-ConfigWithSchema {
     param(
         [Parameter(Mandatory)]
-        [hashtable]$Data,
+        [object]$Data,
 
         [Parameter(Mandatory)]
         [hashtable]$Schema
     )
 
+    # Normalize incoming Data to a hashtable for consistent lookup
+    if ($Data -is [hashtable]) {
+        $dataHash = $Data
+    } else {
+        $dataHash = Convert-PSObjectToHashtable -Object $Data
+    }
+
     $output = @{}
 
     foreach ($key in $Schema.Keys) {
 
-        if ($Data.ContainsKey($key)) {
+        if ($dataHash.ContainsKey($key)) {
             # Recursively merge nested hashes
             if ($Schema[$key] -is [hashtable]) {
-                $output[$key] = Merge-ConfigWithSchema -Data $Data[$key] -Schema $Schema[$key]
+                $output[$key] = Merge-ConfigWithSchema -Data $dataHash[$key] -Schema $Schema[$key]
             }
             else {
-                $output[$key] = $Data[$key]
+                $output[$key] = $dataHash[$key]
             }
         }
         else {
@@ -160,76 +167,110 @@ function Merge-ConfigWithSchema {
 }
 
 
-# -------------------------------------------------------
-# Load a single PSD1 device file
-# -------------------------------------------------------
-function Load-DeviceConfig {
+# Convert a PSCustomObject (or object) to a plain hashtable for easier key lookup
+function Convert-PSObjectToHashtable {
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        $Object
     )
 
-    $absPath = Resolve-AbsolutePath $Path
+    if ($null -eq $Object) { return @{} }
 
-    if (-not (Test-Path $absPath)) {
-        Write-Log -Message "Device config not found: $absPath" -Level ERROR
-        throw "Missing device config: $absPath"
+    # If it's already a hashtable, return as-is
+    if ($Object -is [hashtable]) { return $Object }
+
+    $ht = @{}
+    foreach ($p in $Object.PSObject.Properties) {
+        $ht[$p.Name] = $p.Value
     }
-
-    Write-Log "Loading device configuration: $absPath"
-
-    $raw = Import-SafePSData -Path $absPath
-    if (-not $raw) {
-        throw "Device config failed to load: $absPath"
-    }
-
-    # -------------------------
-    # Normalize common legacy/variant keys so validators/builders work
-    # -------------------------
-    # Host files sometimes use 'IPAddress' instead of 'IP'
-    if ($raw.PSObject.Properties.Name -contains 'IPAddress' -and -not ($raw.PSObject.Properties.Name -contains 'IP')) {
-        $raw.IP = $raw.IPAddress
-    }
-
-    # DHCP/host DNS lists sometimes use DNSServers vs DNS
-    if ($raw.PSObject.Properties.Name -contains 'DNSServers' -and -not ($raw.PSObject.Properties.Name -contains 'DNS')) {
-        $raw.DNS = $raw.DNSServers
-    }
-
-    if (-not $raw.DeviceType) {
-        throw "Device config missing DeviceType: $absPath"
-    }
-
-    # Merge based on device type
-    switch ($raw.DeviceType) {
-        "Router" {
-            $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultRouterSchema
-        }
-        "Switch" {
-            $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultSwitchSchema
-        }
-        "Host" {
-            $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultHostSchema
-        }
-        default {
-            throw "Unknown DeviceType '$($raw.DeviceType)' in file: $absPath"
-        }
-    }
-
-    # Convert to PSCustomObject
-    $obj = [PSCustomObject]$final
-
-    # Add metadata
-    $obj | Add-Member -NotePropertyName SourcePath -NotePropertyValue $absPath
-    $obj | Add-Member -NotePropertyName ImportTimestamp -NotePropertyValue (Get-Date)
-
-    return $obj
+    return $ht
 }
 
 
+# -------------------------------------------------------
+# Load all devices from a single JSON file
+# Expected JSON shapes supported:
+# - An array of device objects: [ { Hostname: 'R1', DeviceType: 'Router', ... }, ... ]
+# - An object with a top-level 'devices' array: { devices: [ ... ] }
+# -------------------------------------------------------
+function Load-AllDevicesFromJson {
+    param(
+        [Parameter(Mandatory)]
+        [string]$File
+    )
+
+    $absFile = Resolve-AbsolutePath $File
+    if (-not (Test-Path $absFile)) { throw "JSON device file not found: $absFile" }
+
+    Write-Log "Loading device configurations from JSON file: $absFile"
+
+    try {
+        $content = Get-Content -Path $absFile -Raw -ErrorAction Stop
+        $json = ConvertFrom-Json -InputObject $content -Depth 10
+    } catch {
+        Write-Log -Message "Failed to parse JSON device file: $_" -Level ERROR
+        throw "Failed to parse JSON device file: $absFile"
+    }
+
+    # Support both top-level array or object with 'devices' property
+    if ($null -eq $json) { return @() }
+
+    if ($json.PSObject.Properties.Name -contains 'devices') {
+        $items = $json.devices
+    }
+    elseif ($json -is [System.Collections.IEnumerable] -and -not ($json -is [string])) {
+        $items = $json
+    }
+    else {
+        # Single device object
+        $items = @($json)
+    }
+
+    $list = @()
+    $index = 1
+
+    foreach ($itm in $items) {
+        # convert to hashtable for Merge logic
+        $raw = Convert-PSObjectToHashtable -Object $itm
+
+        if (-not $raw.ContainsKey('DeviceType')) {
+            throw "Device entry missing DeviceType (item index $index) in $absFile"
+        }
+
+        switch ($raw.DeviceType) {
+            'Router' {
+                $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultRouterSchema
+            }
+            'Switch' {
+                $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultSwitchSchema
+            }
+            'Host' {
+                $final = Merge-ConfigWithSchema -Data $raw -Schema $Global:DefaultHostSchema
+            }
+            default {
+                throw "Unknown DeviceType '$($raw.DeviceType)' in JSON file: $absFile (item $index)"
+            }
+        }
+
+        $obj = [PSCustomObject]$final
+        $obj | Add-Member -NotePropertyName SourcePath -NotePropertyValue $absFile
+        $obj | Add-Member -NotePropertyName ImportTimestamp -NotePropertyValue (Get-Date)
+        $obj | Add-Member -NotePropertyName DeviceIndex -NotePropertyValue $index
+
+        $list += $obj
+        $index++
+    }
+
+    $sorted = Sort-DevicesForDeployment -Devices $list
+    Write-Log "Loaded $($sorted.Count) device configurations from JSON"
+    return $sorted
+}
+
 
 # -------------------------------------------------------
-# Load all devices in a folder
+# JSON-first device loading API
+# From now on the loader expects a single JSON file (or a path to a folder
+# that contains a devices.json file). PSD1-per-file support has been removed.
 # -------------------------------------------------------
 function Load-AllDevices {
     param(
@@ -237,42 +278,35 @@ function Load-AllDevices {
         [string]$Folder
     )
 
-    $absFolder = Resolve-AbsolutePath $Folder
+    # Treat the incoming value as a path. It may be a file or a folder.
+    $absPath = Resolve-AbsolutePath $Folder
 
-    if (-not (Test-Path $absFolder)) {
-        throw "Invalid device folder: $absFolder"
+    if (-not (Test-Path $absPath)) {
+        throw "Device path not found: $absPath"
     }
 
-    Write-Log "Loading device files from $absFolder"
-
-    $files = Get-ChildItem -Path $absFolder -Filter *.psd1
-
-    if ($files.Count -eq 0) {
-        Write-Log -Message "No .psd1 files found in $absFolder" -Level WARN
-        return @()
+    # If caller gave a directory, look for devices.json inside it
+    $item = Get-Item -LiteralPath $absPath -ErrorAction Stop
+    if ($item.PSIsContainer) {
+        $candidate = Join-Path $absPath 'devices.json'
+        if (-not (Test-Path $candidate)) {
+            throw "JSON device file 'devices.json' not found in folder: $absPath. PSD1-per-device support has been removed."
+        }
+        return Load-AllDevicesFromJson -File $candidate
     }
 
-    $list = @()
-    $index = 1
-
-    foreach ($file in $files) {
-        $d = Load-DeviceConfig -Path $file.FullName
-        $d | Add-Member DeviceIndex $index
-        $index++
-        $list += $d
+    # If caller passed a file, ensure it's JSON
+    if (-not $item.PSIsContainer) {
+        if ($item.Extension -ne '.json') {
+            throw "Unsupported device file type: $($item.Extension). Only .json is supported now."
+        }
+        return Load-AllDevicesFromJson -File $item.FullName
     }
-
-    # Sort Routers → Switches → Hosts
-    $sorted = Sort-DevicesForDeployment -Devices $list
-
-    Write-Log "Loaded $($sorted.Count) device configurations"
-    return $sorted
 }
 
 
-
 # -------------------------------------------------------
-# Load a specific device by hostname
+# Load a specific device by hostname (JSON-based)
 # -------------------------------------------------------
 function Load-DeviceByName {
     param(
@@ -287,7 +321,7 @@ function Load-DeviceByName {
     $match = $devices | Where-Object { $_.Hostname -eq $Name }
 
     if (-not $match) {
-        throw "No device named '$Name' found in folder: $Folder"
+        throw "No device named '$Name' found in devices file/folder: $Folder"
     }
 
     return $match

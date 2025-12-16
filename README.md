@@ -1,31 +1,150 @@
+
 # NetDeploy
 
-NetDeploy is a small PowerShell-based network automation project designed to load device configuration data (PSD1), validate it against simple schemas, build CLI commands for Cisco IOS devices, and deploy them over SSH. The repository is intended as a lab/demo tool for learning automation patterns and for controlled deployment to lab devices.
+NetDeploy is a simple, friendly PowerShell module for automating network device configuration in labs and demos. It loads device data, builds the commands your devices need, and can safely show you what it will do (dry-run) or actually apply changes over SSH.
 
-This README includes a research-backed References section that links to documentation and resources used while building this project — useful if you need to demonstrate the research behind the implementation.
+This README explains what NetDeploy can do, how to install and use it, and how to make it work on your computer (change paths). The writing is easy to follow — even a beginner or a 10-year-old can get started.
 
-## How it works 
-- Device configs are stored as PSD1 files under `configs/devices/`.
-- `core/DeviceLoader.ps1` loads and normalizes PSD1 content into PowerShell objects.
-- `core/deviceValidator.ps1` validates device objects before deployment.
-- `core/CommandBuilder.ps1` generates Cisco IOS command lists for each device type.
-- `core/SSHDeploy.ps1` uses Posh-SSH to connect, backup running-config, and apply commands.
-- A small TUI in `tui/` exposes an interactive menu to pick devices and run deployments.
+## What NetDeploy does (in plain words)
+- Load device descriptions (IP addresses, usernames, interfaces, routing) from a single JSON file.
+- Check that each device description looks right (validation).
+- Create the list of commands needed to configure each device (the command builder).
+- Back up each device's current running configuration before changing anything.
+- Apply the commands over SSH (when you want to do the real thing).
+- Support safe DryRun mode that only shows what would happen (no network activity).
+- Run many device deployments in parallel, but grouped into named "runs" so logs are easy to find.
 
-## Key files
-- `NetDeploy.psm1` / `NetDeploy.psd1` — module bootstrap and exports.
-- `core/DeviceLoader.ps1` — loads PSD1 configs and merges defaults.
-- `core/deviceValidator.ps1` — validation rules per device type.
-- `core/CommandBuilder.ps1` — builds CLI command sequences.
-- `core/SSHDeploy.ps1` — backup and deployment over SSH (Posh-SSH).
-- `tui/` — simple console UI to select and deploy devices.
+## Key features (quick list)
+- Single-file device data (JSON) loader and validator.
+- Build-only DryRun mode for safe previews.
+- Backup-before-deploy behavior.
+- Parallel deployments with throttling (limit concurrent jobs).
+- Per-run job logs: every run gets a named log file in `logs/jobs/` so you can find everything about a run quickly.
+- TUI (simple console UI) to select devices and start runs.
+- Easy path configuration so you can put logs/devices anywhere on your computer.
 
-## Usage
-This section gives two step-by-step workflows: a safe non-interactive DryRun flow (recommended for testing/grading) and the interactive TUI flow for live deployments.
+## How to get it and use it (step-by-step, copy/paste)
+
+1) Download the project
+
+- Option A — clone with Git (recommended if you know Git):
+
+```powershell
+git clone https://github.com/nilskele/NetDeploy.git
+cd NetDeploy
+```
+
+- Option B — download the ZIP from GitHub and unzip it somewhere you like.
+
+2) Import the module into PowerShell
+
+Open PowerShell (pwsh) and run:
+
+```powershell
+# From the repository root
+Import-Module -Force ./NetDeploy.psd1 -Verbose
+```
+
+3) Try a safe DryRun (no devices changed)
+
+```powershell
+# Load devices (module uses the configured devices path or repo default)
+$devices = Load-Devices
+
+# See the first device and run a dry-run
+$devices[0] | Select-Object Hostname, DeviceType, ManagementIP
+Invoke-DeviceDeployment -Device $devices[0] -DryRun -RunName 'my-first-dryrun'
+```
+
+4) Try the interactive UI
+
+```powershell
+# Start the simple menu-driven UI
+pwsh -NoProfile -File ./tui/DeploymentUI.ps1
+```
+
+The UI will ask which devices to deploy, whether to run in parallel, and an optional run name. If you pick DryRun the tool will only show what it would do.
+
+## Logs and how runs are grouped
+
+Every run (single-device or multi-device) gets a run name and a unique timestamp. NetDeploy writes:
+
+- A main log: `logs/NetDeploy-YYYYMMDD.log` where general events and START/END markers are written.
+- A per-run job log: `logs/jobs/<RunName>-<timestamp>-<rand>.log` that contains all messages for that run (very handy for instructors and debugging).
+
+Example: if you run `Invoke-AllDeviceDeployment -RunName 'lab1'` you'll see a job log like `logs/jobs/lab1-20251216-171348-2318.log` that contains everything the run did.
+
+You can inspect logs with simple commands:
+
+```powershell
+Get-ChildItem -Path ./logs/jobs -File | Sort-Object LastWriteTime -Descending
+Get-Content -Path ./logs/jobs/<that-file>.log -Tail 200
+```
+
+## Make NetDeploy use folders on your own computer
+
+You don't have to keep device files or logs inside the project. To tell NetDeploy where to look and where to write, use these helpers:
+
+```powershell
+# After importing the module
+Set-NetDeployPaths -DevicesPath 'C:\my-labs\devices' -LogsPath 'C:\my-labs\logs' -JobsPath 'C:\my-labs\logs\jobs' -BackupsPath 'C:\my-labs\logs\backups'
+
+# Check what is configured
+Get-NetDeployPaths | Format-List
+```
+
+If you prefer, you can set the globals before importing the module so they are applied immediately:
+
+```powershell
+$Global:NetDeployDevicesPath = 'C:\my-labs\devices'
+$Global:NetDeployLogDir = 'C:\my-labs\logs'
+$Global:NetDeployJobsDir = 'C:\my-labs\logs\jobs'
+Import-Module -Force ./NetDeploy.psd1
+```
+
+NetDeploy will create the folders if they don't exist.
+
+## Parallel runs and throttling (keeping things safe)
+
+NetDeploy can deploy to many devices at once. To avoid using too many resources, it runs devices in batches. You can control how many devices run at the same time with the `-Throttle` parameter (default 10).
+
+Example: run up to 5 devices at once in a dry-run:
+
+```powershell
+$sel = $devices[0..9]
+Invoke-AllDeviceDeployment -Devices $sel -Parallel -Throttle 5 -DryRun -RunName 'parallel-test'
+```
+
+Each batch will start jobs, wait for them to finish, and then continue with the next batch. All jobs in the same run write to the same per-run job log.
+
+## Simple explanations (for beginners / kids)
+
+- "Device file" = a small file that says what a router or switch has (IP, name, interfaces).
+- "DryRun" = a preview button — shows what will happen but doesn't touch anything.
+- "Run name" = a label you give a group of changes so you can find them later in the logs.
+- "Throttle" = how many devices to work on at the same time (smaller numbers = safer for tiny computers).
+
+## Commands you will use most often
+
+- Load devices: `Load-Devices` (optionally `-Path` to a folder or single JSON file)
+- Run single-device dry-run: `Invoke-DeviceDeployment -Device <obj> -DryRun -RunName 'name'`
+- Run many devices (parallel): `Invoke-AllDeviceDeployment -Devices <array> -Parallel -Throttle 10 -RunName 'name'`
+- Change paths: `Set-NetDeployPaths -DevicesPath <path> -LogsPath <path> -JobsPath <path> -BackupsPath <path>`
+- Show paths: `Get-NetDeployPaths`
+
+## Next steps and extras you might like
+
+- Add a tiny config file so `Set-NetDeployPaths` is remembered between sessions (I can add this).
+- Add a small TUI menu to list recent job logs and open one (I can add this too).
+- Switch from Start-Job to a runspace pool if you need extreme performance for hundreds of devices.
+
+---
+
+## Sources
+
+
 
 Prerequisites
-- PowerShell 7.x (cross-platform `pwsh`) or Windows PowerShell where appropriate.
-- `Posh-SSH` for live SSH operations (only required for actual deployments):
 	```powershell
 	Install-Module -Name Posh-SSH -Scope CurrentUser
 	```
@@ -45,6 +164,20 @@ Import-Module -Force ./NetDeploy.psd1 -Verbose
 # Verify exported functions (optional)
 Get-Command -Module NetDeploy -CommandType Function
 ```
+
+### Custom paths
+
+You can override the default log, job, backup and device folder locations at runtime using the exported helpers:
+
+```powershell
+# Set custom directories (relative or absolute)
+Set-NetDeployPaths -LogsPath './my-logs' -JobsPath './my-logs/jobs' -BackupsPath './my-logs/backups' -DevicesPath './configs/devices'
+
+# Verify
+Get-NetDeployPaths | Format-List
+```
+
+After calling `Set-NetDeployPaths` future runs (including background jobs) will write logs into your configured directories.
 
 2) Load device configurations
 ```powershell

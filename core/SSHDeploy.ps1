@@ -224,27 +224,59 @@ function Deploy-AllDevices {
         [Parameter(Mandatory)][array]$Devices,
         [int]$CommandDelay = 0,
         [switch]$Parallel,
-        [switch]$DryRun
+        [switch]$DryRun,
+        [int]$Throttle = 10,
+        [string]$JobId = $null
     )
 
     if ($Parallel) {
-        $jobs = @()
-        foreach ($dev in $Devices) {
-            $jobs += Start-Job -ScriptBlock {
-                param($d,$delay,$root)
-                Import-Module Posh-SSH -Force
-                . "$root/Utils.ps1"
-                . "$root/CommandBuilder.ps1"
-                . "$root/SSHDeploy.ps1"
-                Deploy-Device -Device $d -CommandDelay $delay
-            } -ArgumentList $dev, $CommandDelay, $PSScriptRoot
-        }
+        if ($Throttle -le 0) { $Throttle = $Devices.Count }
 
-        Write-Log "Waiting for parallel jobs to finish..." -Level INFO
-        $jobs | Wait-Job | Out-Null
-        $jobs | Receive-Job | Out-Null
-        $jobs | Remove-Job
+        $total = $Devices.Count
+        $idx = 0
+        $batchNumber = 1
+
+        while ($idx -lt $total) {
+            $end = [Math]::Min($idx + $Throttle - 1, $total - 1)
+            $batch = $Devices[$idx..$end]
+
+            $startDisplay = $idx + 1
+            $endDisplay = $end + 1
+            Write-Log ("Starting batch {0}: devices {1}-{2} of {3} (concurrency={4})" -f $batchNumber, $startDisplay, $endDisplay, $total, $Throttle) -Level INFO
+
+            $jobs = @()
+            foreach ($dev in $batch) {
+                $jobs += Start-Job -ScriptBlock {
+                    param($d,$delay,$root,$dryrun,$jobid,$joblog)
+                    # Restore job id in the child process so Write-Log writes to per-job log
+                    if ($jobid) { $Global:NetDeployJobId = $jobid }
+                    if ($joblog) { $Global:NetDeployJobLogFile = $joblog }
+                    # Try to import Posh-SSH in job, but tolerate missing module for DryRun tests
+                    try { Import-Module Posh-SSH -Force -ErrorAction Stop } catch { }
+                    . "$root/Utils.ps1"
+                    . "$root/CommandBuilder.ps1"
+                    . "$root/SSHDeploy.ps1"
+                    Deploy-Device -Device $d -CommandDelay $delay -DryRun:$dryrun
+                } -ArgumentList $dev, $CommandDelay, $PSScriptRoot, $DryRun, $JobId, $Global:NetDeployJobLogFile
+            }
+
+            Write-Log "Waiting for batch $batchNumber jobs to finish..." -Level INFO
+            $jobs | Wait-Job | Out-Null
+            $jobs | Receive-Job | Out-Null
+            $jobs | Remove-Job
+
+            $idx += $Throttle
+            $batchNumber++
+        }
     } else {
+        # Ensure current process has JobId available so Write-Log writes into the right job log
+        if ($JobId) {
+            if (-not $Global:NetDeployJobId) { $Global:NetDeployJobId = $JobId }
+            if (-not $Global:NetDeployJobLogFile -and (Get-Variable -Name NetDeployJobsDir -Scope Global -ErrorAction SilentlyContinue)) {
+                # If a job log file wasn't set by New-LogJob, create a default one
+                $Global:NetDeployJobLogFile = Join-Path $Global:NetDeployJobsDir ("run-{0}.log" -f $JobId)
+            }
+        }
         foreach ($dev in $Devices) {
             Deploy-Device -Device $dev -CommandDelay $CommandDelay -DryRun:$DryRun
         }
