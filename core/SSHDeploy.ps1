@@ -153,11 +153,19 @@ function Invoke-SSHCommands {
     $results = @()
 
     try {
-        # Create SSH stream for interactive command execution
-        $stream = New-SSHShellStream -SessionId $Session.SessionId
+        # Wait briefly for session to be fully established
+        Start-Sleep -Milliseconds 1000
         
-        # Clear initial output
-        Start-Sleep -Milliseconds 500
+        # Create SSH stream for interactive command execution
+        $stream = New-SSHShellStream -SessionId $Session.SessionId -Columns 200
+        
+        if (-not $stream) {
+            Write-Log "Failed to create SSH stream for $($Session.ComputerName)" -Level ERROR
+            return $results
+        }
+        
+        # Clear initial output/banner
+        Start-Sleep -Milliseconds 1000
         $stream.Read() | Out-Null
         
         # Disable paging
@@ -180,6 +188,11 @@ function Invoke-SSHCommands {
             } catch {
                 Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
             }
+        }
+        
+        # Dispose stream properly
+        if ($stream) {
+            $stream.Dispose()
         }
     } catch {
         Write-Log "Error creating SSH stream for $($Session.ComputerName): $_" -Level ERROR
