@@ -98,7 +98,7 @@ function Backup-DeviceConfig {
     }
 
     try {
-        $output = Invoke-SSHCommand -SessionId $session.SessionId -Command 'show running-config'
+        $output = Invoke-SSHCommand -SessionId $session.SessionId -Command 'show running-config' -TimeOut 60
         $text = if ($output.Output) { $output.Output -join "`n" } else { "" }
 
         $text | Out-File -FilePath $file -Encoding UTF8
@@ -128,7 +128,7 @@ function Invoke-SSHCommands {
     foreach ($cmd in $Commands) {
         try {
             Write-Log "[$($Session.ComputerName)] Sending: $cmd" -Level DEBUG
-            $output = Invoke-SSHCommand -SessionId $Session.SessionId -Command $cmd
+            $output = Invoke-SSHCommand -SessionId $Session.SessionId -Command $cmd -TimeOut 60
 
             if ($output.Output) {
                 $results += $output.Output
