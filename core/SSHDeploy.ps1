@@ -152,18 +152,27 @@ function Invoke-SSHCommands {
 
     $results = @()
 
+    # Verify session is still connected
+    if (-not $Session -or -not $Session.Connected) {
+        Write-Log "SSH session not connected for $($Session.ComputerName)" -Level ERROR
+        return $results
+    }
+
+    # Wait briefly for session to be fully established
+    Start-Sleep -Milliseconds 1000
+    
+    # Create SSH stream for interactive command execution (suppress retries noise)
+    $stream = $null
+    $ErrorActionPreference = 'SilentlyContinue'
+    $stream = New-SSHShellStream -SessionId $Session.SessionId
+    $ErrorActionPreference = 'Continue'
+    
+    if (-not $stream) {
+        Write-Log "Failed to create SSH stream for $($Session.ComputerName)" -Level ERROR
+        return $results
+    }
+    
     try {
-        # Wait briefly for session to be fully established
-        Start-Sleep -Milliseconds 1000
-        
-        # Create SSH stream for interactive command execution
-        $stream = New-SSHShellStream -SessionId $Session.SessionId -Columns 200
-        
-        if (-not $stream) {
-            Write-Log "Failed to create SSH stream for $($Session.ComputerName)" -Level ERROR
-            return $results
-        }
-        
         # Clear initial output/banner
         Start-Sleep -Milliseconds 1000
         $stream.Read() | Out-Null
@@ -189,13 +198,11 @@ function Invoke-SSHCommands {
                 Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
             }
         }
-        
+    } finally {
         # Dispose stream properly
         if ($stream) {
             $stream.Dispose()
         }
-    } catch {
-        Write-Log "Error creating SSH stream for $($Session.ComputerName): $_" -Level ERROR
     }
 
     return $results
