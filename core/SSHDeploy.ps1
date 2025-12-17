@@ -251,6 +251,9 @@ function Deploy-Device {
         return
     }
 
+    # Wait for session to stabilize before creating streams
+    Start-Sleep -Seconds 2
+
     try {
         # Enable mode if required
         $enableCmds = @()
