@@ -324,6 +324,11 @@ function Build-SwitchCommands {
         }
     }
 
+    # Default Gateway (for L2 switches)
+    if ($Config.DefaultGateway) {
+        Safe-Append -ArrayRef $a -Item "ip default-gateway $($Config.DefaultGateway)"
+    }
+
     # L3 static routes
     if ($Config.L3 -and $Config.L3.StaticRoutes) {
         foreach ($r in $Config.L3.StaticRoutes) {

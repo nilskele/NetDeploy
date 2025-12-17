@@ -155,6 +155,7 @@
     "SVIs": [
       { "VLAN": 1, "IP": "10.2.0.10", "Mask": "255.255.255.0" }
     ],
+    "DefaultGateway": "10.2.0.1",
     "ACLs": [],
     "STP": { "Mode": "pvst", "Priority": 32768 },
     "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
@@ -177,6 +178,7 @@
     "SVIs": [
       { "VLAN": 1, "IP": "10.3.0.10", "Mask": "255.255.255.0" }
     ],
+    "DefaultGateway": "10.3.0.1",
     "ACLs": [],
     "STP": { "Mode": "pvst", "Priority": 32768 },
     "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
