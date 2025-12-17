@@ -16,8 +16,8 @@
         "ProcessID": 1,
         "RouterID": "1.1.1.1",
         "Networks": [
-          { "Network": "10.0.1.0", "Area": 0 },
-          { "Network": "10.0.2.0", "Area": 0 }
+          { "Network": "10.0.1.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.0.2.0", "Mask": "255.255.255.252", "Area": 0 }
         ]
       },
       "StaticRoutes": []
@@ -62,8 +62,8 @@
         "ProcessID": 1,
         "RouterID": "2.2.2.2",
         "Networks": [
-          { "Network": "10.0.2.0", "Area": 0 },
-          { "Network": "10.2.0.0", "Area": 0 }
+          { "Network": "10.0.2.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.2.0.0", "Mask": "255.255.255.0", "Area": 0 }
         ]
       },
       "StaticRoutes": []
@@ -108,8 +108,8 @@
         "ProcessID": 1,
         "RouterID": "3.3.3.3",
         "Networks": [
-          { "Network": "10.0.1.0", "Area": 0 },
-          { "Network": "10.3.0.0", "Area": 0 }
+          { "Network": "10.0.1.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.3.0.0", "Mask": "255.255.255.0", "Area": 0 }
         ]
       },
       "StaticRoutes": []
