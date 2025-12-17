@@ -152,56 +152,32 @@ function Invoke-SSHCommands {
 
     $results = @()
 
-    # Verify session exists
     if (-not $Session) {
         Write-Log "SSH session is null" -Level ERROR
         return $results
     }
 
-    # Wait briefly for session to be fully established
-    Start-Sleep -Milliseconds 1000
-    
-    # Create SSH stream for interactive command execution (suppress retries noise)
-    $stream = $null
-    $ErrorActionPreference = 'SilentlyContinue'
-    $stream = New-SSHShellStream -SessionId $Session.SessionId
-    $ErrorActionPreference = 'Continue'
-    
-    if (-not $stream) {
-        Write-Log "Failed to create SSH stream for $($Session.ComputerName)" -Level ERROR
-        return $results
-    }
-    
-    try {
-        # Clear initial output/banner
-        Start-Sleep -Milliseconds 1000
-        $stream.Read() | Out-Null
-        
-        # Disable paging
-        $stream.WriteLine("terminal length 0")
-        Start-Sleep -Milliseconds 500
-        $stream.Read() | Out-Null
-
-        foreach ($cmd in $Commands) {
-            try {
-                Write-Log "[$($Session.ComputerName)] Sending: $cmd" -Level DEBUG
-                
-                $stream.WriteLine($cmd)
-                Start-Sleep -Seconds $DelayPerCommand
-                
-                $output = $stream.Read()
-                if ($output) {
-                    $results += $output
-                    Write-Log "[$($Session.ComputerName)] Output: $output" -Level DEBUG
+    foreach ($cmd in $Commands) {
+        try {
+            Write-Log "[$($Session.ComputerName)] Sending: $cmd" -Level DEBUG
+            
+            $result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $cmd -TimeOut 60
+            
+            if ($result) {
+                $results += $result
+                if ($result.Output) {
+                    Write-Log "[$($Session.ComputerName)] Output: $($result.Output)" -Level DEBUG
                 }
-            } catch {
-                Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
+                if ($result.Error) {
+                    Write-Log "[$($Session.ComputerName)] Error: $($result.Error)" -Level WARN
+                }
             }
-        }
-    } finally {
-        # Dispose stream properly
-        if ($stream) {
-            $stream.Dispose()
+            
+            if ($DelayPerCommand -gt 0) {
+                Start-Sleep -Seconds $DelayPerCommand
+            }
+        } catch {
+            Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
         }
     }
 
