@@ -1,0 +1,15 @@
+# NetDeploy - ignore private logs and session-specific data
+
+# Logs directory (contains main logs, job logs, and backups)
+logs/
+
+# Temporary test directories
+temp-logs/
+my-logs/
+
+# PowerShell session history
+*.pshistory
+
+# OS-specific files
+.DS_Store
+Thumbs.db
