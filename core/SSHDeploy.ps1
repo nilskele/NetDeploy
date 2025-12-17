@@ -98,10 +98,37 @@ function Backup-DeviceConfig {
     }
 
     try {
-        $output = Invoke-SSHCommand -SessionId $session.SessionId -Command 'show running-config' -TimeOut 60
-        $text = if ($output.Output) { $output.Output -join "`n" } else { "" }
-
-        $text | Out-File -FilePath $file -Encoding UTF8
+        # Use SSH Stream for Cisco devices (more reliable than exec channel)
+        $stream = New-SSHShellStream -SessionId $session.SessionId
+        
+        # Clear initial banner/prompt
+        Start-Sleep -Milliseconds 500
+        $stream.Read() | Out-Null
+        
+        # Send terminal length 0 to disable pagination
+        $stream.WriteLine("terminal length 0")
+        Start-Sleep -Milliseconds 500
+        $stream.Read() | Out-Null
+        
+        # Send show running-config command
+        $stream.WriteLine("show running-config")
+        Start-Sleep -Seconds 3
+        
+        $text = $stream.Read()
+        
+        # Clean up the output (remove command echo and prompt)
+        $lines = $text -split "`n"
+        $configLines = @()
+        $inConfig = $false
+        
+        foreach ($line in $lines) {
+            if ($line -match "^Building configuration") { $inConfig = $true }
+            if ($inConfig) { $configLines += $line }
+        }
+        
+        $cleanText = ($configLines -join "`n").Trim()
+        
+        $cleanText | Out-File -FilePath $file -Encoding UTF8
 
         Write-Log "Backup saved: $file" -Level INFO
         return $file
@@ -114,31 +141,48 @@ function Backup-DeviceConfig {
 }
 
 # -------------------------
-# Run commands on device
+# Run commands on device using SSH Stream
 # -------------------------
 function Invoke-SSHCommands {
     param(
         [Parameter(Mandatory)] $Session,
         [Parameter(Mandatory)][string[]]$Commands,
-        [int]$DelayPerCommand = 0
+        [int]$DelayPerCommand = 1
     )
 
     $results = @()
 
-    foreach ($cmd in $Commands) {
-        try {
-            Write-Log "[$($Session.ComputerName)] Sending: $cmd" -Level DEBUG
-            $output = Invoke-SSHCommand -SessionId $Session.SessionId -Command $cmd -TimeOut 60
+    try {
+        # Create SSH stream for interactive command execution
+        $stream = New-SSHShellStream -SessionId $Session.SessionId
+        
+        # Clear initial output
+        Start-Sleep -Milliseconds 500
+        $stream.Read() | Out-Null
+        
+        # Disable paging
+        $stream.WriteLine("terminal length 0")
+        Start-Sleep -Milliseconds 500
+        $stream.Read() | Out-Null
 
-            if ($output.Output) {
-                $results += $output.Output
-                Write-Log "[$($Session.ComputerName)] Output: $($output.Output -join "`n")" -Level DEBUG
+        foreach ($cmd in $Commands) {
+            try {
+                Write-Log "[$($Session.ComputerName)] Sending: $cmd" -Level DEBUG
+                
+                $stream.WriteLine($cmd)
+                Start-Sleep -Seconds $DelayPerCommand
+                
+                $output = $stream.Read()
+                if ($output) {
+                    $results += $output
+                    Write-Log "[$($Session.ComputerName)] Output: $output" -Level DEBUG
+                }
+            } catch {
+                Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
             }
-
-            if ($DelayPerCommand -gt 0) { Start-Sleep -Seconds $DelayPerCommand }
-        } catch {
-            Write-Log "Error executing command '$cmd' on $($Session.ComputerName): $_" -Level ERROR
         }
+    } catch {
+        Write-Log "Error creating SSH stream for $($Session.ComputerName): $_" -Level ERROR
     }
 
     return $results
