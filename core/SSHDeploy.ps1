@@ -152,9 +152,9 @@ function Invoke-SSHCommands {
 
     $results = @()
 
-    # Verify session is still connected
-    if (-not $Session -or -not $Session.Connected) {
-        Write-Log "SSH session not connected for $($Session.ComputerName)" -Level ERROR
+    # Verify session exists
+    if (-not $Session) {
+        Write-Log "SSH session is null" -Level ERROR
         return $results
     }
 
