@@ -2,162 +2,204 @@
   {
     "Hostname": "R1",
     "DeviceType": "Router",
-    "ManagementIP": "192.168.1.1",
+    "ManagementIP": "192.168.122.254",
     "SSHPort": 22,
-    "Credentials": { "Username": "admin", "Password": "cisco123" },
+    "Credentials": { "Username": "admin", "Password": "cisco" },
     "Interfaces": [
-      { "Name": "GigabitEthernet0/0", "Description": "LAN", "IP": "10.0.0.1", "Mask": "255.255.255.0", "Status": "up" },
-      { "Name": "GigabitEthernet0/1", "Description": "WAN", "IP": "192.168.100.1", "Mask": "255.255.255.252", "Status": "up" }
+      { "Name": "GigabitEthernet0/0", "Description": "Management_Internet", "IP": "192.168.122.254", "Mask": "255.255.255.0", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "Link_to_R3", "IP": "10.0.1.1", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/2", "Description": "Link_to_R2", "IP": "10.0.2.1", "Mask": "255.255.255.252", "Status": "up" }
     ],
     "Routing": {
       "OSPF": {
         "Enabled": true,
         "ProcessID": 1,
         "RouterID": "1.1.1.1",
-        "Networks": [ { "Network": "10.0.0.0", "Area": 0 }, { "Network": "192.168.100.0", "Area": 0 } ]
+        "Networks": [
+          { "Network": "10.0.1.0", "Area": 0 },
+          { "Network": "10.0.2.0", "Area": 0 }
+        ]
       },
       "StaticRoutes": []
     },
     "NAT": {
-      "Enabled": true,
-      "InsideInterface": "GigabitEthernet0/0",
-      "OutsideInterface": "GigabitEthernet0/1",
-      "PAT": { "Enabled": true },
+      "Enabled": false,
+      "InsideInterface": "",
+      "OutsideInterface": "",
+      "PAT": { "Enabled": false },
       "Static": [],
       "Pools": []
     },
     "DHCP": {
-      "Enabled": true,
-      "Pools": [
-        {
-          "Name": "LAN_POOL",
-          "Network": "10.0.0.0",
-          "Mask": "255.255.255.0",
-          "DefaultRouter": "10.0.0.1",
-          "DNSServers": ["10.0.0.1"],
-          "DomainName": "example.local",
-          "ExcludedAddresses": ["10.0.0.1", "10.0.0.2"]
-        }
-      ]
+      "Enabled": false,
+      "Pools": []
     },
     "DNS": {
-      "Enabled": true,
-      "DomainName": "example.local",
-      "DNSServers": ["8.8.8.8"],
-      "Hosts": [ { "Name": "host1", "IP": "10.0.0.10" }, { "Name": "host2", "IP": "10.0.0.11" }, { "Name": "host3", "IP": "10.0.0.12" } ]
+      "Enabled": false,
+      "DomainName": "lab.local",
+      "DNSServers": [],
+      "Hosts": []
     },
     "Services": {
-      "NTP": { "Enabled": true, "Servers": ["192.168.100.10"] },
-      "Syslog": { "Enabled": true, "Host": "192.168.100.20" },
-      "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco123" } ] }
+      "NTP": { "Enabled": false, "Servers": [] },
+      "Syslog": { "Enabled": false, "Host": "" },
+      "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco" } ] }
     }
   },
   {
     "Hostname": "R2",
     "DeviceType": "Router",
-    "ManagementIP": "192.168.1.2",
+    "ManagementIP": "10.0.2.2",
     "SSHPort": 22,
-    "Credentials": { "Username": "admin", "Password": "cisco123" },
+    "Credentials": { "Username": "admin", "Password": "cisco" },
     "Interfaces": [
-      { "Name": "GigabitEthernet0/0", "Description": "LAN", "IP": "10.0.1.1", "Mask": "255.255.255.0", "Status": "up" },
-      { "Name": "GigabitEthernet0/1", "Description": "WAN", "IP": "192.168.100.2", "Mask": "255.255.255.252", "Status": "up" }
+      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.2.2", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "LAN_Switch", "IP": "10.2.0.1", "Mask": "255.255.255.0", "Status": "up" }
     ],
     "Routing": {
-      "OSPF": { "Enabled": true, "ProcessID": 1, "RouterID": "2.2.2.2", "Networks": [ { "Network": "10.0.1.0", "Area": 0 }, { "Network": "192.168.100.0", "Area": 0 } ] },
+      "OSPF": {
+        "Enabled": true,
+        "ProcessID": 1,
+        "RouterID": "2.2.2.2",
+        "Networks": [
+          { "Network": "10.0.2.0", "Area": 0 },
+          { "Network": "10.2.0.0", "Area": 0 }
+        ]
+      },
       "StaticRoutes": []
     },
-    "NAT": { "Enabled": false, "InsideInterface": "", "OutsideInterface": "", "PAT": { "Enabled": false }, "Static": [], "Pools": [] },
-    "DHCP": { "Enabled": false, "Pools": [] },
-    "DNS": { "Enabled": false, "DomainName": "", "DNSServers": [], "Hosts": [] },
-    "Services": { "NTP": { "Enabled": true, "Servers": ["192.168.100.10"] }, "Syslog": { "Enabled": true, "Host": "192.168.100.20" }, "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco123" } ] } }
+    "NAT": {
+      "Enabled": false,
+      "InsideInterface": "",
+      "OutsideInterface": "",
+      "PAT": { "Enabled": false },
+      "Static": [],
+      "Pools": []
+    },
+    "DHCP": {
+      "Enabled": false,
+      "Pools": []
+    },
+    "DNS": {
+      "Enabled": false,
+      "DomainName": "lab.local",
+      "DNSServers": [],
+      "Hosts": []
+    },
+    "Services": {
+      "NTP": { "Enabled": false, "Servers": [] },
+      "Syslog": { "Enabled": true, "Host": "192.168.122.254" },
+      "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco" } ] }
+    }
+  },
+  {
+    "Hostname": "R3",
+    "DeviceType": "Router",
+    "ManagementIP": "10.0.1.2",
+    "SSHPort": 22,
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "Interfaces": [
+      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.1.2", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "LAN_Switch", "IP": "10.3.0.1", "Mask": "255.255.255.0", "Status": "up" }
+    ],
+    "Routing": {
+      "OSPF": {
+        "Enabled": true,
+        "ProcessID": 1,
+        "RouterID": "3.3.3.3",
+        "Networks": [
+          { "Network": "10.0.1.0", "Area": 0 },
+          { "Network": "10.3.0.0", "Area": 0 }
+        ]
+      },
+      "StaticRoutes": []
+    },
+    "NAT": {
+      "Enabled": false,
+      "InsideInterface": "",
+      "OutsideInterface": "",
+      "PAT": { "Enabled": false },
+      "Static": [],
+      "Pools": []
+    },
+    "DHCP": {
+      "Enabled": false,
+      "Pools": []
+    },
+    "DNS": {
+      "Enabled": false,
+      "DomainName": "lab.local",
+      "DNSServers": [],
+      "Hosts": []
+    },
+    "Services": {
+      "NTP": { "Enabled": false, "Servers": [] },
+      "Syslog": { "Enabled": true, "Host": "192.168.122.254" },
+      "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco" } ] }
+    }
   },
   {
     "Hostname": "S1",
     "DeviceType": "Switch",
-    "ManagementIP": "192.168.1.11",
+    "ManagementIP": "10.2.0.10",
     "SSHPort": 22,
-    "Credentials": { "Username": "admin", "Password": "cisco123" },
-    "VLANs": [ { "ID": 1, "Name": "Default" }, { "ID": 10, "Name": "LAN1" }, { "ID": 20, "Name": "LAN2" } ],
-    "Interfaces": [ { "Name": "GigabitEthernet0/1", "Mode": "access", "VLAN": 10, "TrunkAllowed": [], "Description": "H1", "Status": "up" }, { "Name": "GigabitEthernet0/2", "Mode": "access", "VLAN": 10, "TrunkAllowed": [], "Description": "H2", "Status": "up" }, { "Name": "GigabitEthernet0/24", "Mode": "trunk", "VLAN": 0, "TrunkAllowed": [10,20], "Description": "Uplink to R1", "Status": "up" } ],
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "VLANs": [
+      { "ID": 1, "Name": "Default" }
+    ],
+    "Interfaces": [
+      { "Name": "GigabitEthernet0/0", "Mode": "access", "VLAN": 1, "TrunkAllowed": [], "Description": "Uplink_to_R2", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Mode": "access", "VLAN": 1, "TrunkAllowed": [], "Description": "PC1", "Status": "up" }
+    ],
     "EtherChannel": { "Enabled": false, "ID": 1, "Mode": "active", "Interfaces": [] },
-    "SVIs": [ { "VLAN": 10, "IP": "10.0.0.254", "Mask": "255.255.255.0" }, { "VLAN": 20, "IP": "10.0.1.254", "Mask": "255.255.255.0" } ],
+    "SVIs": [
+      { "VLAN": 1, "IP": "10.2.0.10", "Mask": "255.255.255.0" }
+    ],
     "ACLs": [],
     "STP": { "Mode": "pvst", "Priority": 32768 },
-    "DHCPRelay": { "Enabled": true, "RelayIPs": ["10.0.0.1"] },
-    "Logging": { "Enabled": true, "Host": "192.168.100.20" }
+    "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
+    "Logging": { "Enabled": true, "Host": "192.168.122.254" }
   },
   {
     "Hostname": "S2",
     "DeviceType": "Switch",
-    "ManagementIP": "192.168.1.12",
+    "ManagementIP": "10.3.0.10",
     "SSHPort": 22,
-    "Credentials": { "Username": "admin", "Password": "cisco123" },
-    "VLANs": [ { "ID": 1, "Name": "Default" }, { "ID": 10, "Name": "LAN1" } ],
-    "Interfaces": [ { "Name": "GigabitEthernet0/1", "Mode": "access", "VLAN": 10, "TrunkAllowed": [], "Description": "H3", "Status": "up" }, { "Name": "GigabitEthernet0/24", "Mode": "trunk", "VLAN": 0, "TrunkAllowed": [10], "Description": "Uplink to S1", "Status": "up" } ],
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "VLANs": [
+      { "ID": 1, "Name": "Default" }
+    ],
+    "Interfaces": [
+      { "Name": "GigabitEthernet0/0", "Mode": "access", "VLAN": 1, "TrunkAllowed": [], "Description": "Uplink_to_R3", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Mode": "access", "VLAN": 1, "TrunkAllowed": [], "Description": "PC2", "Status": "up" }
+    ],
     "EtherChannel": { "Enabled": false, "ID": 1, "Mode": "active", "Interfaces": [] },
-    "SVIs": [ { "VLAN": 10, "IP": "10.0.0.253", "Mask": "255.255.255.0" } ],
-    "ACLs": [], "STP": { "Mode": "pvst", "Priority": 32768 }, "DHCPRelay": { "Enabled": true, "RelayIPs": ["10.0.0.1"] }, "Logging": { "Enabled": true, "Host": "192.168.100.20" }
-  },
-  {
-    "Hostname": "S3",
-    "DeviceType": "Switch",
-    "ManagementIP": "192.168.1.13",
-    "SSHPort": 22,
-    "Credentials": { "Username": "admin", "Password": "cisco123" },
-    "VLANs": [ { "ID": 1, "Name": "Default" }, { "ID": 20, "Name": "LAN2" } ],
-    "Interfaces": [ { "Name": "GigabitEthernet0/1", "Mode": "access", "VLAN": 20, "TrunkAllowed": [], "Description": "H4", "Status": "up" }, { "Name": "GigabitEthernet0/2", "Mode": "access", "VLAN": 20, "TrunkAllowed": [], "Description": "H5", "Status": "up" }, { "Name": "GigabitEthernet0/24", "Mode": "trunk", "VLAN": 0, "TrunkAllowed": [20], "Description": "Uplink to R2", "Status": "up" } ],
-    "EtherChannel": { "Enabled": false, "ID": 1, "Mode": "active", "Interfaces": [] },
-    "SVIs": [ { "VLAN": 20, "IP": "10.0.1.253", "Mask": "255.255.255.0" } ],
-    "ACLs": [], "STP": { "Mode": "pvst", "Priority": 32768 }, "DHCPRelay": { "Enabled": true, "RelayIPs": ["10.0.0.1"] }, "Logging": { "Enabled": true, "Host": "192.168.100.20" }
+    "SVIs": [
+      { "VLAN": 1, "IP": "10.3.0.10", "Mask": "255.255.255.0" }
+    ],
+    "ACLs": [],
+    "STP": { "Mode": "pvst", "Priority": 32768 },
+    "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
+    "Logging": { "Enabled": true, "Host": "192.168.122.254" }
   },
   {
     "Hostname": "PC1",
     "DeviceType": "Host",
-    "ManagementIP": "10.0.0.10",
-    "Credentials": { "Username": "admin", "Password": "password" },
-    "IP": "10.0.0.10",
+    "ManagementIP": "10.2.0.100",
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "IP": "10.2.0.100",
     "Mask": "255.255.255.0",
-    "Gateway": "10.0.0.254",
-    "DNS": ["10.0.0.1"]
+    "Gateway": "10.2.0.1",
+    "DNS": ["8.8.8.8"]
   },
   {
     "Hostname": "PC2",
     "DeviceType": "Host",
-    "ManagementIP": "10.0.0.11",
-    "Credentials": { "Username": "admin", "Password": "password" },
-    "IP": "10.0.0.11",
+    "ManagementIP": "10.3.0.100",
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "IP": "10.3.0.100",
     "Mask": "255.255.255.0",
-    "Gateway": "10.0.0.254",
-    "DNS": ["10.0.0.1"]
-  },
-  {
-    "Hostname": "PC3",
-    "DeviceType": "Host",
-    "ManagementIP": "10.0.0.12",
-    "Credentials": { "Username": "admin", "Password": "password" },
-    "IP": "10.0.0.12",
-    "Mask": "255.255.255.0",
-    "Gateway": "10.0.0.253",
-    "DNS": ["10.0.0.1"]
-  },
-  {
-    "Hostname": "PC4",
-    "DeviceType": "Host",
-    "ManagementIP": "10.0.1.10",
-    "Credentials": { "Username": "admin", "Password": "password" },
-    "IP": "10.0.1.10",
-    "Mask": "255.255.255.0",
-    "Gateway": "10.0.1.253",
-    "DNS": ["10.0.0.1"]
-  },
-  {
-    "Hostname": "PC5",
-    "DeviceType": "Host",
-    "ManagementIP": "10.0.1.11",
-    "Credentials": { "Username": "admin", "Password": "password" },
-    "IP": "10.0.1.11",
-    "Mask": "255.255.255.0",
-    "Gateway": "10.0.1.253",
-    "DNS": ["10.0.0.1"]
+    "Gateway": "10.3.0.1",
+    "DNS": ["8.8.8.8"]
   }
 ]
