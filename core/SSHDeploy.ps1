@@ -227,26 +227,24 @@ function Deploy-Device {
         return
     }
 
-    # Wait for session to stabilize before creating streams
-    Start-Sleep -Seconds 2
-
     try {
-        # Enable mode if required
-        $enableCmds = @()
-        if ($Device.Credentials.EnablePassword) {
-            $enableCmds += "enable"
-            $enableCmds += $Device.Credentials.EnablePassword
+        # Send all commands via SSH
+        foreach ($cmd in $cmds) {
+            Write-Log "[$($Device.Hostname)] Sending: $cmd" -Level DEBUG
+            
+            $result = Invoke-SSHCommand -SessionId $session.SessionId -Command $cmd -TimeOut 60
+            
+            if ($result -and $result.Output) {
+                Write-Log "[$($Device.Hostname)] Output: $($result.Output)" -Level DEBUG
+            }
+            if ($result -and $result.Error) {
+                Write-Log "[$($Device.Hostname)] Error: $($result.Error)" -Level WARN
+            }
+            
+            if ($CommandDelay -gt 0) {
+                Start-Sleep -Seconds $CommandDelay
+            }
         }
-
-        if ($enableCmds.Count -gt 0) {
-            Invoke-SSHCommands -Session $session -Commands $enableCmds -DelayPerCommand $CommandDelay
-        }
-
-        # Disable paging to avoid "--More--"
-        Invoke-SSHCommands -Session $session -Commands @("terminal length 0") -DelayPerCommand 1
-
-        # Execute built commands
-        Invoke-SSHCommands -Session $session -Commands $cmds -DelayPerCommand $CommandDelay
 
         Write-Log "Deployment completed for $($Device.Hostname)" -Level INFO
     } catch {
