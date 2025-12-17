@@ -105,17 +105,17 @@ function Build-RouterCommands {
         $ospfID = $Config.Routing.OSPF.ProcessID
         if (-not $ospfID) { $ospfID = 1 }
         Safe-Append -ArrayRef $a -Item "router ospf $ospfID"
-        if ($Config.Routing.OSPF.RouterID) { Safe-Append -ArrayRef $a -Item " router-id $($Config.Routing.OSPF.RouterID)" }
+        if ($Config.Routing.OSPF.RouterID) { Safe-Append -ArrayRef $a -Item "router-id $($Config.Routing.OSPF.RouterID)" }
 
         foreach ($net in $Config.Routing.OSPF.Networks) {
             if ($net.Network -and $net.Mask -and $net.Area -ne $null) {
                 $wild = Convert-ToWildcard -Mask $net.Mask
-                Safe-Append -ArrayRef $a -Item " network $($net.Network) $wild area $($net.Area)"
+                Safe-Append -ArrayRef $a -Item "network $($net.Network) $wild area $($net.Area)"
             } else {
                 Write-Log "OSPF network entry missing fields on $($Config.Hostname): $($net | Out-String)" -Level WARN
             }
         }
-        Safe-Append -ArrayRef $a -Item " exit"
+        Safe-Append -ArrayRef $a -Item "exit"
     }
 
     # NAT
