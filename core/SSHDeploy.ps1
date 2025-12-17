@@ -40,7 +40,7 @@ function Connect-SSH {
                     $Username,
                     (ConvertTo-SecureString $Password -AsPlainText -Force)
                 )
-            ) -Port $Port -ConnectionTimeout $Timeout
+            ) -Port $Port -ConnectionTimeout $Timeout -AcceptKey
 
             if ($session -and $session.SessionId -ne $null) {
                 Write-Log "SSH session established with $DeviceHost (ID: $($session.SessionId))" -Level INFO
