@@ -227,29 +227,57 @@ function Deploy-Device {
         return
     }
 
+    $stream = $null
     try {
-        # Send all commands via SSH
+        # Wait for session to stabilize
+        Start-Sleep -Seconds 3
+        
+        # Create shell stream (same method that works for backups)
+        Write-Log "Creating SSH shell stream for deployment to $($Device.Hostname)" -Level DEBUG
+        $stream = New-SSHShellStream -SessionId $session.SessionId -Columns 200
+        
+        if (-not $stream) {
+            Write-Log "Failed to create SSH stream for $($Device.Hostname)" -Level ERROR
+            return
+        }
+        
+        # Wait for initial prompt and clear buffer
+        Start-Sleep -Seconds 2
+        $stream.Read() | Out-Null
+        
+        # Send all commands through the stream
         foreach ($cmd in $cmds) {
             Write-Log "[$($Device.Hostname)] Sending: $cmd" -Level DEBUG
+            $stream.WriteLine($cmd)
             
-            $result = Invoke-SSHCommand -SessionId $session.SessionId -Command $cmd -TimeOut 60
-            
-            if ($result -and $result.Output) {
-                Write-Log "[$($Device.Hostname)] Output: $($result.Output)" -Level DEBUG
-            }
-            if ($result -and $result.Error) {
-                Write-Log "[$($Device.Hostname)] Error: $($result.Error)" -Level WARN
-            }
-            
+            # Wait between commands
             if ($CommandDelay -gt 0) {
                 Start-Sleep -Seconds $CommandDelay
+            } else {
+                Start-Sleep -Milliseconds 500
             }
+            
+            # Read output
+            $output = $stream.Read()
+            if ($output) {
+                Write-Log "[$($Device.Hostname)] Output: $output" -Level DEBUG
+            }
+        }
+        
+        # Wait for final commands to complete
+        Start-Sleep -Seconds 3
+        $finalOutput = $stream.Read()
+        if ($finalOutput) {
+            Write-Log "[$($Device.Hostname)] Final output: $finalOutput" -Level DEBUG
         }
 
         Write-Log "Deployment completed for $($Device.Hostname)" -Level INFO
     } catch {
         Write-Log "Deployment error for $($Device.Hostname): $_" -Level ERROR
     } finally {
+        if ($stream) {
+            $stream.Dispose()
+        }
         if ($session) {
             Remove-SSHSession -SessionId $session.SessionId
             Write-Log "SSH session closed for $($Device.Hostname)" -Level DEBUG
