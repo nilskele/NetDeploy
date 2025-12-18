@@ -86,6 +86,6 @@ function Select-Devices {
 
     $result = @()
     foreach ($idx in $indices) { $result += $Devices[$idx] }
-    return $result
+    return ,$result  # Comma forces array return even with single element
 }
 
