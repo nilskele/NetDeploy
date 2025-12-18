@@ -16,6 +16,41 @@
 # Connect via SSH with safety check
 # -------------------------
 function Connect-SSH {
+    <#
+    .SYNOPSIS
+        Establishes an SSH connection to a network device.
+    
+    .DESCRIPTION
+        Connects to a device via SSH using Posh-SSH module with automatic retry logic.
+        Tests host reachability before attempting connection and automatically accepts SSH host keys.
+    
+    .PARAMETER DeviceHost
+        The hostname or IP address of the device to connect to.
+    
+    .PARAMETER Username
+        The username for SSH authentication.
+    
+    .PARAMETER Password
+        The password for SSH authentication (plain text).
+    
+    .PARAMETER Port
+        The SSH port number. Defaults to 22.
+    
+    .PARAMETER Timeout
+        Connection timeout in seconds. Defaults to 10.
+    
+    .PARAMETER Retries
+        Number of connection retry attempts. Defaults to 3.
+    
+    .EXAMPLE
+        $session = Connect-SSH -DeviceHost "192.168.1.1" -Username "admin" -Password "cisco"
+        
+        Establishes SSH connection to the device with default port and timeout.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][string]$DeviceHost,
         [Parameter(Mandatory)][string]$Username,
@@ -66,6 +101,38 @@ function Connect-SSH {
 # Backup running-config helper
 # -------------------------
 function Backup-DeviceConfig {
+    <#
+    .SYNOPSIS
+        Backs up the running configuration of a network device.
+    
+    .DESCRIPTION
+        Connects to a device via SSH and retrieves the running configuration using 'show running-config'.
+        Saves the configuration to a timestamped file in the logs/backups directory.
+        Uses SSH shell streams for reliable output capture from Cisco IOS devices.
+    
+    .PARAMETER Device
+        The device object containing hostname, credentials, and connection details.
+    
+    .PARAMETER Timeout
+        SSH connection timeout in seconds. Defaults to 30.
+    
+    .PARAMETER DryRun
+        If specified, simulates the backup without actually connecting to the device.
+    
+    .EXAMPLE
+        $backupFile = Backup-DeviceConfig -Device $router
+        
+        Creates a backup of the router's running configuration.
+    
+    .EXAMPLE
+        Backup-DeviceConfig -Device $switch -Timeout 60 -DryRun
+        
+        Simulates backup with 60-second timeout.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][object]$Device,
         [int]$Timeout = 30,
@@ -156,6 +223,33 @@ function Backup-DeviceConfig {
 # Run commands on device using SSH Stream
 # -------------------------
 function Invoke-SSHCommands {
+    <#
+    .SYNOPSIS
+        Executes a series of commands on a device via an existing SSH session.
+    
+    .DESCRIPTION
+        Sends commands to a device one at a time through an SSH session using Invoke-SSHCommand.
+        Logs command output and errors. Supports configurable delay between commands.
+    
+    .PARAMETER Session
+        The active SSH session object from Connect-SSH or New-SSHSession.
+    
+    .PARAMETER Commands
+        Array of command strings to execute on the device.
+    
+    .PARAMETER DelayPerCommand
+        Delay in seconds between each command. Defaults to 1 second.
+    
+    .EXAMPLE
+        Invoke-SSHCommands -Session $session -Commands @("enable", "conf t", "hostname Router1") -DelayPerCommand 2
+        
+        Executes three commands with 2-second delays between them.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+        Note: This function is currently defined but not used in favor of direct shell stream execution.
+    #>
+    
     param(
         [Parameter(Mandatory)] $Session,
         [Parameter(Mandatory)][string[]]$Commands,
@@ -200,6 +294,43 @@ function Invoke-SSHCommands {
 # Deploy commands to a single device
 # -------------------------
 function Deploy-Device {
+    <#
+    .SYNOPSIS
+        Deploys configuration commands to a single network device.
+    
+    .DESCRIPTION
+        Performs a complete deployment workflow for one device:
+        1. Builds command list from device configuration
+        2. Backs up current running configuration
+        3. Connects via SSH
+        4. Sends all commands via shell stream
+        5. Closes SSH session
+        
+        Uses SSH shell streams for reliable command execution on Cisco IOS devices.
+    
+    .PARAMETER Device
+        The device object containing configuration, credentials, and connection details.
+    
+    .PARAMETER CommandDelay
+        Delay in seconds between each command. Defaults to 0 (uses 500ms minimum).
+    
+    .PARAMETER DryRun
+        If specified, builds commands and simulates backup but does not connect to device.
+    
+    .EXAMPLE
+        Deploy-Device -Device $router -CommandDelay 1
+        
+        Deploys configuration to router with 1-second delay between commands.
+    
+    .EXAMPLE
+        Deploy-Device -Device $switch -DryRun
+        
+        Shows what commands would be deployed without actually connecting.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)] $Device,
         [int]$CommandDelay = 0,
@@ -301,6 +432,55 @@ function Deploy-Device {
 # Deploy multiple devices
 # -------------------------
 function Deploy-AllDevices {
+    <#
+    .SYNOPSIS
+        Deploys configuration commands to multiple network devices.
+    
+    .DESCRIPTION
+        Orchestrates deployment to multiple devices either sequentially or in parallel.
+        Automatically sorts devices by type (routers first, then switches, then hosts)
+        to ensure proper deployment order.
+        
+        Parallel mode uses PowerShell jobs with configurable throttling to control
+        concurrent deployments.
+    
+    .PARAMETER Devices
+        Array of device objects to deploy configurations to.
+    
+    .PARAMETER CommandDelay
+        Delay in seconds between each command sent to devices. Defaults to 0.
+    
+    .PARAMETER Parallel
+        If specified, deploys to devices in parallel using PowerShell background jobs.
+    
+    .PARAMETER DryRun
+        If specified, simulates deployment without connecting to devices.
+    
+    .PARAMETER Throttle
+        Maximum number of concurrent deployments when using Parallel mode. Defaults to 10.
+    
+    .PARAMETER JobId
+        Optional job ID for logging correlation.
+    
+    .EXAMPLE
+        Deploy-AllDevices -Devices $deviceList -CommandDelay 1
+        
+        Deploys to all devices sequentially with 1-second delay between commands.
+    
+    .EXAMPLE
+        Deploy-AllDevices -Devices $deviceList -Parallel -Throttle 5
+        
+        Deploys to devices in parallel with maximum 5 concurrent deployments.
+    
+    .EXAMPLE
+        Deploy-AllDevices -Devices $deviceList -DryRun
+        
+        Shows what would be deployed without making changes.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][array]$Devices,
         [int]$CommandDelay = 0,
