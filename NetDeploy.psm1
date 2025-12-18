@@ -12,6 +12,7 @@
 # -------------------------
 $__nd_ModuleRoot = $PSScriptRoot
 $__nd_InternalFiles = @(
+    'core/PathLoader.ps1',
     'core/Utils.ps1',
     'core/DeviceLoader.ps1',
     'core/deviceValidator.ps1',
