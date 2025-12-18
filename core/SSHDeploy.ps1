@@ -112,18 +112,30 @@ function Backup-DeviceConfig {
         
         # Send show running-config command
         $stream.WriteLine("show running-config")
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds 5
         
+        # Read all available output
         $text = $stream.Read()
         
-        # Clean up the output (remove command echo and prompt)
-        $lines = $text -split "`n"
+        # Clean up the output (remove command echo and prompts)
+        $lines = $text -split "`r?`n"
         $configLines = @()
         $inConfig = $false
         
         foreach ($line in $lines) {
-            if ($line -match "^Building configuration") { $inConfig = $true }
-            if ($inConfig) { $configLines += $line }
+            # Start capturing from "Building configuration"
+            if ($line -match "^Building configuration") { 
+                $inConfig = $true 
+            }
+            
+            # Stop at the end prompt (router# or switch#)
+            if ($inConfig -and $line -match "^[A-Za-z0-9_-]+#\s*$") {
+                break
+            }
+            
+            if ($inConfig) { 
+                $configLines += $line 
+            }
         }
         
         $cleanText = ($configLines -join "`n").Trim()
