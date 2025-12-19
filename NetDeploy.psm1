@@ -34,6 +34,41 @@ foreach ($__nd_f in $__nd_InternalFiles) {
 # -------------------------
 
 function Invoke-DeviceDeployment {
+    <#
+    .SYNOPSIS
+        Deploys configuration to a single network device.
+    
+    .DESCRIPTION
+        Public API function for deploying configuration to one device.
+        Validates device configuration, creates a job log, backs up current config,
+        and deploys the new configuration via SSH.
+    
+    .PARAMETER Device
+        The device object containing configuration and connection details.
+    
+    .PARAMETER CommandDelay
+        Delay in seconds between commands. Defaults to 0.
+    
+    .PARAMETER DryRun
+        If specified, validates and shows commands without connecting to device.
+    
+    .PARAMETER RunName
+        Optional name for the deployment run (used in log files).
+    
+    .EXAMPLE
+        Invoke-DeviceDeployment -Device $router -CommandDelay 1
+        
+        Deploys configuration to a single router with 1-second delay between commands.
+    
+    .EXAMPLE
+        Invoke-DeviceDeployment -Device $switch -DryRun -RunName "test-deployment"
+        
+        Performs a dry-run deployment simulation with custom run name.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)] $Device,
         [int]$CommandDelay = 0,
@@ -54,6 +89,47 @@ function Invoke-DeviceDeployment {
 }
 
 function Invoke-AllDeviceDeployment {
+    <#
+    .SYNOPSIS
+        Deploys configuration to multiple network devices.
+    
+    .DESCRIPTION
+        Public API function for batch device deployment.
+        Validates all devices, creates a job log, and orchestrates deployment
+        either sequentially or in parallel.
+    
+    .PARAMETER Devices
+        Array of device objects to deploy.
+    
+    .PARAMETER CommandDelay
+        Delay in seconds between commands. Defaults to 0.
+    
+    .PARAMETER Parallel
+        If specified, deploys devices in parallel using PowerShell jobs.
+    
+    .PARAMETER DryRun
+        If specified, validates and shows commands without connecting to devices.
+    
+    .PARAMETER Throttle
+        Maximum concurrent deployments when using Parallel mode. Defaults to 10.
+    
+    .PARAMETER RunName
+        Optional name for the deployment run (used in log files).
+    
+    .EXAMPLE
+        Invoke-AllDeviceDeployment -Devices $deviceList
+        
+        Deploys configuration to all devices sequentially.
+    
+    .EXAMPLE
+        Invoke-AllDeviceDeployment -Devices $deviceList -Parallel -Throttle 5 -RunName "prod-deploy"
+        
+        Deploys to devices in parallel (max 5 concurrent) with custom run name.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][array]$Devices,
         [int]$CommandDelay = 0,
@@ -83,6 +159,35 @@ function Invoke-AllDeviceDeployment {
 
 
 function Set-NetDeployPaths {
+    <#
+    .SYNOPSIS
+        Configures custom paths for NetDeploy directories.
+    
+    .DESCRIPTION
+        Allows customization of log, backup, job, and device configuration directories.
+        Creates directories if they don't exist.
+    
+    .PARAMETER LogsPath
+        Custom path for log files.
+    
+    .PARAMETER JobsPath
+        Custom path for job-specific log files.
+    
+    .PARAMETER BackupsPath
+        Custom path for device configuration backups.
+    
+    .PARAMETER DevicesPath
+        Custom path for device configuration files.
+    
+    .EXAMPLE
+        Set-NetDeployPaths -BackupsPath "C:\NetworkBackups"
+        
+        Sets custom backup directory.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [string]$LogsPath,
         [string]$JobsPath,
@@ -104,6 +209,23 @@ function Set-NetDeployPaths {
 }
 
 function Get-NetDeployPaths {
+    <#
+    .SYNOPSIS
+        Retrieves currently configured NetDeploy paths.
+    
+    .DESCRIPTION
+        Returns an object containing current paths for logs, jobs, backups, and device configs.
+    
+    .EXAMPLE
+        $paths = Get-NetDeployPaths
+        Write-Host "Backups are stored in: $($paths.BackupsPath)"
+        
+        Gets current path configuration.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     return [pscustomobject]@{
         LogsPath = $Global:NetDeployLogDir
         JobsPath = $Global:NetDeployJobsDir
@@ -117,6 +239,33 @@ function Get-NetDeployPaths {
 # Expose a simple function that the TUI expects to load devices by path
 # -----------------------------------------------------------------
 function Load-Devices {
+    <#
+    .SYNOPSIS
+        Loads device configurations from JSON or PSD1 files.
+    
+    .DESCRIPTION
+        Loads device configurations from a JSON file or directory of PSD1 files.
+        Automatically detects file type and delegates to appropriate loader.
+        Used by the TUI and can be called programmatically.
+    
+    .PARAMETER Path
+        Path to devices.json file or directory containing device PSD1 files.
+        If not specified, uses default configs/devices location.
+    
+    .EXAMPLE
+        $devices = Load-Devices
+        
+        Loads devices from default location.
+    
+    .EXAMPLE
+        $devices = Load-Devices -Path "C:\MyConfigs\devices.json"
+        
+        Loads devices from custom JSON file.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [string]$Path
     )
@@ -166,6 +315,26 @@ function Load-Devices {
 # Test all devices wrapper
 # -------------------------
 function Test-AllDevices {
+    <#
+    .SYNOPSIS
+        Loads and validates device configurations.
+    
+    .DESCRIPTION
+        Loads devices from a folder and validates all configurations against schemas.
+        Useful for testing device configurations without deploying.
+    
+    .PARAMETER Folder
+        Path to folder containing device PSD1 files.
+    
+    .EXAMPLE
+        $devices = Test-AllDevices -Folder "./configs/devices"
+        
+        Validates all device configurations in the specified folder.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         [string]$Folder
