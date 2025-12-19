@@ -18,6 +18,25 @@ USAGE:
 # Helpers
 # -------------------------
 function Convert-ToWildcard {
+    <#
+    .SYNOPSIS
+        Converts a subnet mask to wildcard mask format.
+    
+    .DESCRIPTION
+        Helper function that converts standard subnet masks to Cisco wildcard format.
+        Falls back to manual conversion if Convert-MaskToWildcard is not available.
+    
+    .PARAMETER Mask
+        The subnet mask to convert (e.g., "255.255.255.252").
+    
+    .EXAMPLE
+        $wildcard = Convert-ToWildcard -Mask "255.255.255.252"
+        # Returns: "0.0.0.3"
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)][string]$Mask)
     if (Get-Command -Name Convert-MaskToWildcard -ErrorAction SilentlyContinue) {
         return Convert-MaskToWildcard -Mask $Mask
@@ -29,6 +48,25 @@ function Convert-ToWildcard {
 }
 
 function Prefix-FromMask {
+    <#
+    .SYNOPSIS
+        Converts a subnet mask to CIDR prefix notation.
+    
+    .DESCRIPTION
+        Helper function that converts subnet masks like 255.255.255.0 to prefix length (e.g., 24).
+        Falls back to manual bit counting if MaskToPrefix is not available.
+    
+    .PARAMETER Mask
+        The subnet mask to convert (e.g., "255.255.255.0").
+    
+    .EXAMPLE
+        $prefix = Prefix-FromMask -Mask "255.255.255.0"
+        # Returns: 24
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)][string]$Mask)
     if (Get-Command -Name MaskToPrefix -ErrorAction SilentlyContinue) {
         return MaskToPrefix -Mask $Mask
@@ -43,6 +81,28 @@ function Prefix-FromMask {
 }
 
 function Safe-Append {
+    <#
+    .SYNOPSIS
+        Safely appends an item to an array passed by reference.
+    
+    .DESCRIPTION
+        Helper function for building command arrays. Appends items to an array
+        passed by reference to avoid PowerShell's array modification issues.
+    
+    .PARAMETER ArrayRef
+        Reference to the array to append to (use [ref]$array).
+    
+    .PARAMETER Item
+        The item to append to the array.
+    
+    .EXAMPLE
+        $cmds = @()
+        Safe-Append -ArrayRef ([ref]$cmds) -Item "enable"
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][ref]$ArrayRef,
         [Parameter(Mandatory)][object]$Item
@@ -56,6 +116,28 @@ function Safe-Append {
 # Router builder
 # -------------------------
 function Build-RouterCommands {
+    <#
+    .SYNOPSIS
+        Builds Cisco IOS router configuration commands from a device object.
+    
+    .DESCRIPTION
+        Generates a complete ordered list of Cisco IOS CLI commands for router configuration.
+        Includes: hostname, AAA, interfaces, static routes, OSPF, NAT, DHCP, DNS, NTP, syslog, ACLs.
+        
+        All commands are returned as a single array ready for sequential execution.
+    
+    .PARAMETER Config
+        The router configuration object containing all settings.
+    
+    .EXAMPLE
+        $commands = Build-RouterCommands -Config $routerConfig
+        
+        Generates command array for router configuration.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)] $Config)
 
     Write-Log "Building router commands for $($Config.Hostname)" -Level DEBUG
@@ -244,6 +326,27 @@ function Build-RouterCommands {
 # Switch builder
 # -------------------------
 function Build-SwitchCommands {
+    <#
+    .SYNOPSIS
+        Builds Cisco IOS switch configuration commands from a device object.
+    
+    .DESCRIPTION
+        Generates a complete ordered list of Cisco IOS CLI commands for switch configuration.
+        Includes: hostname, VLANs, interfaces (access/trunk/routed), SVIs, default gateway,
+        static routes, STP, DHCP relay, logging, AAA users.
+    
+    .PARAMETER Config
+        The switch configuration object containing all settings.
+    
+    .EXAMPLE
+        $commands = Build-SwitchCommands -Config $switchConfig
+        
+        Generates command array for switch configuration.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)] $Config)
 
     Write-Log "Building switch commands for $($Config.Hostname)" -Level DEBUG
@@ -363,7 +466,11 @@ function Build-SwitchCommands {
 # Host builder
 # -------------------------
 function Build-HostCommands {
-    param([Parameter(Mandatory)] $Config)
+    <#
+    .SYNOPSIS
+        Builds configuration commands for host devices from templates.
+    
+    .DESCRIPTION\n        Generates Linux/Unix host configuration commands including static IP setup,\n        gateway configuration, and DNS settings. Returns shell commands for host provisioning.\n    \n    .PARAMETER Config\n        The host configuration object containing IP, mask, gateway, DNS settings.\n    \n    .EXAMPLE\n        $commands = Build-HostCommands -Config $hostConfig\n        \n        Returns shell commands for host network configuration.\n    \n    .NOTES\n        18/12/2025 - v1.0 - Initial version - NetDeploy Project\n    #>\n    \n    param([Parameter(Mandatory)] $Config)
 
     Write-Log "Building host provisioning template for $($Config.Hostname)" -Level DEBUG
 
@@ -390,7 +497,22 @@ function Build-HostCommands {
 # Dispatcher
 # -------------------------
 function Build-Commands {
-    param([Parameter(Mandatory)] $Device)
+    <#
+    .SYNOPSIS
+        Main entry point for building device configuration commands.
+    
+    .DESCRIPTION
+        Delegates to device-type specific builders (router, switch, host) based on DeviceType property.
+        This is the primary function called by deployment scripts to generate command lists.
+    \n    .PARAMETER Device
+        The device object containing DeviceType and configuration settings.
+    \n    .EXAMPLE
+        $commands = Build-Commands -Device $deviceObject
+        \n        Generates appropriate command array based on device type.
+    \n    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    \n    param([Parameter(Mandatory)] $Device)
 
     switch ($Device.DeviceType.ToLower()) {
         "router" { return Build-RouterCommands -Config $Device }
