@@ -129,6 +129,30 @@ $Global:DefaultHostSchema = @{
 # Merge user PSD1 data with defaults
 # -------------------------------------------------------
 function Merge-ConfigWithSchema {
+    <#
+    .SYNOPSIS
+        Merges user-provided device configuration with default schema.
+    
+    .DESCRIPTION
+        Recursively merges device configuration data with schema defaults.
+        Fills in missing fields with default values while preserving user-provided values.
+        Normalizes both hashtables and PSCustomObjects.
+    
+    .PARAMETER Data
+        User-provided device configuration (hashtable or PSCustomObject).
+    
+    .PARAMETER Schema
+        Default schema template (hashtable with default values).
+    
+    .EXAMPLE
+        $merged = Merge-ConfigWithSchema -Data $userConfig -Schema $Global:DefaultRouterSchema
+        
+        Merges user router configuration with default router schema.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         [object]$Data,
@@ -169,6 +193,26 @@ function Merge-ConfigWithSchema {
 
 # Convert a PSCustomObject (or object) to a plain hashtable for easier key lookup
 function Convert-PSObjectToHashtable {
+    <#
+    .SYNOPSIS
+        Converts PSCustomObject to hashtable.
+    
+    .DESCRIPTION
+        Utility function to normalize PSCustomObject instances into hashtables
+        for easier key-based lookups. Returns input unchanged if already a hashtable.
+    
+    .PARAMETER Object
+        Object to convert (PSCustomObject, hashtable, or null).
+    
+    .EXAMPLE
+        $hash = Convert-PSObjectToHashtable -Object $psobject
+        
+        Converts PowerShell custom object to hashtable.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         $Object
@@ -194,6 +238,31 @@ function Convert-PSObjectToHashtable {
 # - An object with a top-level 'devices' array: { devices: [ ... ] }
 # -------------------------------------------------------
 function Load-AllDevicesFromJson {
+    <#
+    .SYNOPSIS
+        Loads device configurations from a JSON file.
+    
+    .DESCRIPTION
+        Parses a JSON file containing device configurations. Supports two formats:
+        1. Array of devices: [{...}, {...}]
+        2. Object with devices property: {devices: [{...}]}
+        
+        Merges each device with appropriate schema defaults (Router/Switch/Host).
+        Adds metadata (SourcePath, ImportTimestamp, DeviceIndex) to each device.
+        Sorts devices by deployment order (Routers → Switches → Hosts).
+    
+    .PARAMETER File
+        Path to JSON file containing device configurations.
+    
+    .EXAMPLE
+        $devices = Load-AllDevicesFromJson -File "configs/devices/devices.json"
+        
+        Loads all devices from JSON file.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         [string]$File
@@ -273,6 +342,35 @@ function Load-AllDevicesFromJson {
 # that contains a devices.json file). PSD1-per-file support has been removed.
 # -------------------------------------------------------
 function Load-AllDevices {
+    <#
+    .SYNOPSIS
+        Loads all device configurations from JSON file or directory.
+    
+    .DESCRIPTION
+        Primary device loading function. Accepts either:
+        - Path to devices.json file directly
+        - Path to directory containing devices.json
+        
+        Automatically detects path type and delegates to Load-AllDevicesFromJson.
+        PSD1-per-device files are no longer supported.
+    
+    .PARAMETER Folder
+        Path to directory containing devices.json or path to JSON file directly.
+    
+    .EXAMPLE
+        $devices = Load-AllDevices -Folder "configs/devices"
+        
+        Loads devices from configs/devices/devices.json.
+    
+    .EXAMPLE
+        $devices = Load-AllDevices -Folder "C:\MyConfigs\custom-devices.json"
+        
+        Loads devices from specific JSON file.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         [string]$Folder
@@ -309,6 +407,29 @@ function Load-AllDevices {
 # Load a specific device by hostname (JSON-based)
 # -------------------------------------------------------
 function Load-DeviceByName {
+    <#
+    .SYNOPSIS
+        Loads a single device by hostname.
+    
+    .DESCRIPTION
+        Loads all devices from JSON and filters for specific device by hostname.
+        Throws error if device not found.
+    
+    .PARAMETER Folder
+        Path to directory containing devices.json or path to JSON file directly.
+    
+    .PARAMETER Name
+        Hostname of device to load.
+    
+    .EXAMPLE
+        $router = Load-DeviceByName -Folder "configs/devices" -Name "R1"
+        
+        Loads configuration for router R1 only.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)]
         [string]$Folder,
