@@ -202,6 +202,7 @@ NetDeploy/
 **Required:**
 - PowerShell 7+ (pwsh) - [Download here](https://github.com/PowerShell/PowerShell/releases)
 - Posh-SSH module for SSH connectivity
+- **Network connectivity from your deployment machine to all target devices**
 
 **Install Posh-SSH:**
 ```powershell
@@ -211,6 +212,61 @@ Install-Module -Name Posh-SSH -Scope CurrentUser -Force
 **Verify installation:**
 ```powershell
 Get-Module -ListAvailable Posh-SSH
+```
+
+**Network Connectivity Requirements:**
+
+NetDeploy requires IP reachability from the machine running the script to every device's management IP. This is critical - SSH cannot connect without proper routing.
+
+**Common scenarios:**
+
+1. **Direct Management Network Access:**
+   - Your deployment machine is on the same management network as all devices
+   - Example: All devices on 192.168.1.0/24, your machine is 192.168.1.100
+
+2. **Multi-Network Lab with Static Routes (Recommended):**
+   - Devices spread across multiple networks
+   - Add static routes on your deployment machine to reach all networks
+   
+   **Example Setup:**
+   ```bash
+   # Deployment machine: Ubuntu at 192.168.122.73
+   # Router R1: 192.168.122.254 (gateway to other networks)
+   # Router R2: 10.0.2.2 (accessible via R1)
+   # Router R3: 10.0.1.2 (accessible via R1)
+   # Switch S1: 10.2.0.10 (on R2's LAN)
+   # Switch S2: 10.3.0.10 (on R3's LAN)
+   
+   # Add static routes to reach all device networks
+   sudo ip route add 10.0.1.0/30 via 192.168.122.254  # R1-R3 link
+   sudo ip route add 10.0.2.0/30 via 192.168.122.254  # R1-R2 link
+   sudo ip route add 10.2.0.0/24 via 192.168.122.254  # R2 LAN
+   sudo ip route add 10.3.0.0/24 via 192.168.122.254  # R3 LAN
+   
+   # Verify connectivity
+   ping 192.168.122.254  # R1
+   ping 10.0.2.2         # R2
+   ping 10.0.1.2         # R3
+   ping 10.2.0.10        # S1
+   ping 10.3.0.10        # S2
+   ```
+
+3. **VPN or Jump Host:**
+   - Connect to lab network via VPN
+   - Or run NetDeploy from a jump host inside the network
+
+**Test connectivity before deployment:**
+```powershell
+# Test SSH connectivity to each device
+$devices = Load-Devices
+foreach ($device in $devices) {
+    Write-Host "Testing $($device.Hostname) at $($device.ManagementIP)..." -NoNewline
+    if (Test-Connection -ComputerName $device.ManagementIP -Count 1 -Quiet) {
+        Write-Host " OK" -ForegroundColor Green
+    } else {
+        Write-Host " FAILED" -ForegroundColor Red
+    }
+}
 ```
 
 ---
