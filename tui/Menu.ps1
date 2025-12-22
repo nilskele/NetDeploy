@@ -4,6 +4,29 @@
 #>
 
 function Show-Menu {
+    <#
+    .SYNOPSIS
+        Displays a numbered menu with title.
+    
+    .DESCRIPTION
+        Clears screen and displays a formatted menu with title and numbered options.
+        Used throughout the TUI for navigation.
+    
+    .PARAMETER Title
+        Menu title to display at the top.
+    
+    .PARAMETER Options
+        Array of menu option strings to display.
+    
+    .EXAMPLE
+        Show-Menu -Title "Main Menu" -Options @("Deploy Devices", "View Backups", "Exit")
+        
+        Displays main menu with three options.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][string]$Title,
         [Parameter(Mandatory)][string[]]$Options
@@ -21,6 +44,29 @@ function Show-Menu {
 }
 
 function Read-MenuChoice {
+    <#
+    .SYNOPSIS
+        Reads and validates numeric menu choice.
+    
+    .DESCRIPTION
+        Prompts for numeric input and validates it's within valid range (1 to Max).
+        Loops until valid input is received.
+    
+    .PARAMETER Prompt
+        Prompt text to display.
+    
+    .PARAMETER Max
+        Maximum valid selection number.
+    
+    .EXAMPLE
+        $choice = Read-MenuChoice -Prompt "Select option" -Max 5
+        
+        Reads menu choice between 1 and 5.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][string]$Prompt,
         [int]$Max
@@ -44,6 +90,26 @@ function Read-MenuChoice {
 
 # Show recent backup files created by the deployer
 function Show-RecentBackups {
+    <#
+    .SYNOPSIS
+        Displays list of recent backup files.
+    
+    .DESCRIPTION
+        Lists backup files from logs/backups directory sorted by newest first.
+        Shows timestamp and filename for each backup.
+    
+    .PARAMETER Count
+        Maximum number of backups to display. Defaults to 10.
+    
+    .EXAMPLE
+        Show-RecentBackups -Count 20
+        
+        Displays 20 most recent backup files.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([int]$Count = 10)
 
     $backupDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'logs/backups'
@@ -64,6 +130,26 @@ function Show-RecentBackups {
 
 # Show a table of loaded devices
 function Show-LoadedDevices {
+    <#
+    .SYNOPSIS
+        Displays table of loaded device configurations.
+    
+    .DESCRIPTION
+        Shows formatted table with device Index, Hostname, DeviceType, ManagementIP,
+        and credential status. Used to review loaded devices before deployment.
+    
+    .PARAMETER Devices
+        Array of device objects to display.
+    
+    .EXAMPLE
+        Show-LoadedDevices -Devices $deviceList
+        
+        Displays table of all loaded devices.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][array]$Devices
     )
@@ -82,6 +168,27 @@ function Show-LoadedDevices {
 
 # View the contents of a selected backup file (paged)
 function Show-BackupContents {
+    <#
+    .SYNOPSIS
+        Interactively views backup file contents.
+    
+    .DESCRIPTION
+        Lists recent backup files and allows user to select one to view.
+        For large files (>1000 lines), shows first 500 and last 500 lines.
+        User can return to list and view another backup.
+    
+    .PARAMETER Count
+        Maximum number of backups to list. Defaults to 50.
+    
+    .EXAMPLE
+        Show-BackupContents
+        
+        Displays backup list and allows interactive viewing.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [int]$Count = 50
     )
