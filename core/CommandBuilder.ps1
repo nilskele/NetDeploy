@@ -372,6 +372,21 @@ function Build-SwitchCommands {
     Safe-Append -ArrayRef $a -Item "no ip domain-lookup"
     Safe-Append -ArrayRef $a -Item "hostname $($Config.Hostname)"
 
+    # Determine L2 vs L3 mode:
+    # - Multiple SVIs or L3.StaticRoutes → L3 mode (ip routing enabled)
+    # - Single SVI + DefaultGateway → L2 mode (no ip routing, use ip default-gateway)
+    $sviCount = if ($Config.SVIs) { $Config.SVIs.Count } else { 0 }
+    $hasL3Routes = $Config.L3 -and $Config.L3.StaticRoutes -and $Config.L3.StaticRoutes.Count -gt 0
+    $isL3Switch = ($sviCount -gt 1) -or $hasL3Routes
+
+    if ($isL3Switch) {
+        Safe-Append -ArrayRef $a -Item "ip routing"
+        Write-Log "L3 switch mode: enabling ip routing (SVIs: $sviCount, has routes: $hasL3Routes)" -Level DEBUG
+    } else {
+        Safe-Append -ArrayRef $a -Item "no ip routing"
+        Write-Log "L2 switch mode: disabling ip routing" -Level DEBUG
+    }
+
     # VLANs
     if ($Config.VLANs) {
         foreach ($v in $Config.VLANs) {
@@ -440,12 +455,18 @@ function Build-SwitchCommands {
         }
     }
 
-    # Default Gateway (for L2 switches)
+    # Default Gateway
+    # L2 mode: uses "ip default-gateway" (requires no ip routing)
+    # L3 mode: uses static default route (requires ip routing)
     if ($Config.DefaultGateway) {
-        Safe-Append -ArrayRef $a -Item "ip default-gateway $($Config.DefaultGateway)"
+        if ($isL3Switch) {
+            Safe-Append -ArrayRef $a -Item "ip route 0.0.0.0 0.0.0.0 $($Config.DefaultGateway)"
+        } else {
+            Safe-Append -ArrayRef $a -Item "ip default-gateway $($Config.DefaultGateway)"
+        }
     }
 
-    # L3 static routes
+    # L3 static routes (requires ip routing)
     if ($Config.L3 -and $Config.L3.StaticRoutes) {
         foreach ($r in $Config.L3.StaticRoutes) {
             if ($r.Network -and $r.Mask -and $r.NextHop) {
