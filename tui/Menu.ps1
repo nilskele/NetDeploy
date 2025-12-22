@@ -49,8 +49,8 @@ function Read-MenuChoice {
         Reads and validates numeric menu choice.
     
     .DESCRIPTION
-        Prompts for numeric input and validates it's within valid range (1 to Max).
-        Loops until valid input is received.
+        Prompts for numeric input and validates it's within valid range (0 to Max).
+        Loops until valid input is received. Allows 0 for cancel/back.
     
     .PARAMETER Prompt
         Prompt text to display.
@@ -58,10 +58,18 @@ function Read-MenuChoice {
     .PARAMETER Max
         Maximum valid selection number.
     
+    .PARAMETER AllowZero
+        Allow 0 as a valid choice (for cancel/back operations).
+    
     .EXAMPLE
         $choice = Read-MenuChoice -Prompt "Select option" -Max 5
         
         Reads menu choice between 1 and 5.
+    
+    .EXAMPLE
+        $choice = Read-MenuChoice -Prompt "Select option (0 to cancel)" -Max 5 -AllowZero
+        
+        Reads menu choice between 0 and 5.
     
     .NOTES
         18/12/2025 - v1.0 - Initial version - NetDeploy Project
@@ -69,7 +77,8 @@ function Read-MenuChoice {
     
     param(
         [Parameter(Mandatory)][string]$Prompt,
-        [int]$Max
+        [int]$Max,
+        [switch]$AllowZero
     )
 
     while ($true) {
@@ -78,7 +87,8 @@ function Read-MenuChoice {
 
         if ($input -match '^\d+$') {
             $choice = [int]$input
-            if ($choice -ge 1 -and $choice -le $Max) {
+            $min = if ($AllowZero) { 0 } else { 1 }
+            if ($choice -ge $min -and $choice -le $Max) {
                 return $choice
             }
         }
@@ -209,24 +219,39 @@ function Show-BackupContents {
     }
 
     while ($true) {
-        $sel = Read-MenuChoice -Prompt "Enter backup number to view (0 to cancel)" -Max $items.Count
+        $sel = Read-MenuChoice -Prompt "Enter backup number to view (0 to cancel)" -Max $items.Count -AllowZero
         if ($sel -eq 0) { return }
         $file = $items[$sel - 1].FullName
 
         Write-Host "\n--- Viewing: $file ---\n" -ForegroundColor Green
 
         try {
-            # Use Get-Content to stream; if large, show only head and tail with a note
+            # Use Get-Content to stream
             $lines = Get-Content -Path $file -ErrorAction Stop
             $lineCount = $lines.Count
 
-            if ($lineCount -le 1000) {
+            if ($lineCount -eq 0) {
+                Write-Host "Backup file is empty." -ForegroundColor Yellow
+            } elseif ($lineCount -le 100) {
+                # Small file - show all
                 $lines | ForEach-Object { Write-Host $_ }
             } else {
-                Write-Host "File is large ($lineCount lines). Showing first 500 and last 500 lines." -ForegroundColor Yellow
-                $lines[0..499] | ForEach-Object { Write-Host $_ }
-                Write-Host "... [skipped $([int]($lineCount - 1000)) lines] ..." -ForegroundColor DarkGray
-                $lines[($lineCount-500)..($lineCount-1)] | ForEach-Object { Write-Host $_ }
+                # Large file - use More pagination or head/tail
+                Write-Host "File has $lineCount lines. Displaying with pagination..." -ForegroundColor Yellow
+                Write-Host "Press 'q' to stop viewing, 'Enter' to continue..." -ForegroundColor DarkGray
+                Write-Host
+                
+                $pageSize = 50
+                for ($i = 0; $i -lt $lineCount; $i += $pageSize) {
+                    $end = [Math]::Min($i + $pageSize - 1, $lineCount - 1)
+                    $lines[$i..$end] | ForEach-Object { Write-Host $_ }
+                    
+                    if ($end -lt ($lineCount - 1)) {
+                        Write-Host "`n--- Line $($i + 1) to $($end + 1) of $lineCount (press Enter for more, 'q' to quit) ---" -ForegroundColor DarkGray
+                        $key = [System.Console]::ReadLine()
+                        if ($key -eq 'q') { break }
+                    }
+                }
             }
 
         } catch {
