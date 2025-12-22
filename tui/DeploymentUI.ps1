@@ -27,6 +27,38 @@ try {
 . "$PSScriptRoot/DeviceSelector.ps1"
 
 function Start-NetDeployUI {
+    <#
+    .SYNOPSIS
+        Launches the NetDeploy text user interface.
+    
+    .DESCRIPTION
+        Main TUI entry point providing interactive menu for:
+        - Device deployment (sequential or parallel)
+        - Viewing loaded devices
+        - Listing recent backups
+        - Viewing backup contents
+        
+        Loads devices from specified path and presents menu-driven workflow.
+        Supports dry-run mode and custom run names for job logs.
+    
+    .PARAMETER DevicePath
+        Path to device configurations (JSON file or directory). 
+        Defaults to ../configs/devices relative to TUI script location.
+    
+    .EXAMPLE
+        Start-NetDeployUI
+        
+        Launches TUI with default device path.
+    
+    .EXAMPLE
+        Start-NetDeployUI -DevicePath "C:\NetworkConfigs\devices.json"
+        
+        Launches TUI with custom device configuration path.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [string]$DevicePath = "$PSScriptRoot/../configs/devices"
     )
