@@ -7,6 +7,36 @@
 
 # Parse a selection string like '1,3-5' into zero-based indices
 function Parse-SelectionString {
+    <#
+    .SYNOPSIS
+        Parses device selection string into array indices.
+    
+    .DESCRIPTION
+        Converts user-friendly selection strings into zero-based indices.
+        Supports:
+        - 'all' or 'a' for all devices
+        - Single numbers: '3'
+        - Comma-separated: '1,3,5'
+        - Ranges: '2-4'
+        - Combinations: '1,3-5,7'
+        
+        Validates indices are within valid range.
+    
+    .PARAMETER Selection
+        Selection string from user.
+    
+    .PARAMETER MaxIndex
+        Maximum valid index (device count).
+    
+    .EXAMPLE
+        $indices = Parse-SelectionString -Selection "1,3-5" -MaxIndex 10
+        
+        Returns @(0, 2, 3, 4) for devices 1, 3, 4, 5.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][string]$Selection,
         [Parameter(Mandatory)][int]$MaxIndex
@@ -44,6 +74,39 @@ function Parse-SelectionString {
 
 
 function Select-Devices {
+    <#
+    .SYNOPSIS
+        Interactively or programmatically selects devices.
+    
+    .DESCRIPTION
+        Displays device list with numbers and prompts for selection.
+        Supports programmatic selection via Selection parameter.
+        Returns array of selected device objects.
+        
+        Uses comma operator to force array return even for single device
+        (fixes PowerShell unwrapping single-element arrays).
+    
+    .PARAMETER Devices
+        Array of device objects to select from.
+    
+    .PARAMETER Selection
+        Optional programmatic selection string (e.g., '1,3-5' or 'all').
+        If omitted, prompts user interactively.
+    
+    .EXAMPLE
+        $selected = Select-Devices -Devices $allDevices
+        
+        Interactively prompts user to select devices.
+    
+    .EXAMPLE
+        $selected = Select-Devices -Devices $allDevices -Selection "1,3"
+        
+        Programmatically selects devices 1 and 3.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param(
         [Parameter(Mandatory)][array]$Devices,
         [string]$Selection  # optional programmatic selection string (e.g. '1,3-5' or 'all')
