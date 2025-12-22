@@ -315,6 +315,19 @@ function Build-RouterCommands {
         }
     }
 
+    # VTY lines for SSH access - CRITICAL to maintain SSH connectivity
+    Safe-Append -ArrayRef $a -Item "line vty 0 4"
+    Safe-Append -ArrayRef $a -Item " login local"
+    Safe-Append -ArrayRef $a -Item " transport input ssh"
+    Safe-Append -ArrayRef $a -Item " exec-timeout 30 0"
+    Safe-Append -ArrayRef $a -Item " exit"
+
+    # Console line
+    Safe-Append -ArrayRef $a -Item "line con 0"
+    Safe-Append -ArrayRef $a -Item " login local"
+    Safe-Append -ArrayRef $a -Item " exec-timeout 30 0"
+    Safe-Append -ArrayRef $a -Item " exit"
+
     # End
     Safe-Append -ArrayRef $a -Item "end"
     Safe-Append -ArrayRef $a -Item "write memory"

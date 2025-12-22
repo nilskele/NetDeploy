@@ -1,0 +1,61 @@
+! R3 Base Configuration - Safe SSH Access Guaranteed
+! Management IP: 10.0.1.2 (via R1)
+! Username: admin / Password: cisco
+
+enable
+configure terminal
+
+! Hostname
+hostname R3
+
+! Enable password
+enable secret cisco
+
+! Local user for SSH access
+username admin privilege 15 secret cisco
+
+! Domain name for SSH keys
+ip domain-name lab.local
+
+! Generate RSA keys for SSH (if not already present)
+crypto key generate rsa modulus 1024
+
+! SSH version 2
+ip ssh version 2
+
+! Interface configurations
+interface GigabitEthernet0/0
+ description Link_to_R1
+ ip address 10.0.1.2 255.255.255.252
+ no shutdown
+ exit
+
+interface GigabitEthernet0/1
+ description LAN_Switch
+ ip address 10.3.0.1 255.255.255.0
+ no shutdown
+ exit
+
+! VTY lines for SSH access - CRITICAL!
+line vty 0 4
+ login local
+ transport input ssh
+ exec-timeout 30 0
+ exit
+
+! Console access
+line con 0
+ login local
+ exec-timeout 30 0
+ exit
+
+! OSPF Configuration
+router ospf 1
+ router-id 3.3.3.3
+ network 10.0.1.0 0.0.0.3 area 0
+ network 10.3.0.0 0.0.0.255 area 0
+ exit
+
+! Save configuration
+end
+write memory
