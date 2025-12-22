@@ -624,9 +624,20 @@ pwsh -File deploy.ps1
 
 - **Network to Code** - Network automation patterns, examples, and best practices  
   [https://networktocode.com](https://networktocode.com)
+  
+https://blog.paessler.com/know-your-network-with-powershell-and-tcp
 
-- **Cisco IOS Command Reference**  
-  [https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html)
+https://www.reddit.com/r/PowerShell/comments/6d1jph/powershell_for_network_automation/
+
+
+### Dry-Run
+https://stackoverflow.com/questions/11211518/how-to-use-dry-run-in-powershell
+https://news.ycombinator.com/item?id=39275348
+
+### convert hashtable to object
+https://stackoverflow.com/questions/73894087/how-do-i-convert-a-powershell-hashtable-to-an-object
+
+###
 
 ### Video Tutorials & Labs
 
