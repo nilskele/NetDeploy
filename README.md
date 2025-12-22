@@ -1,271 +1,690 @@
-
 # NetDeploy
 
-NetDeploy is a simple, friendly PowerShell module for automating network device configuration in labs and demos. It loads device data, builds the commands your devices need, and can safely show you what it will do (dry-run) or actually apply changes over SSH.
+**Automated network device configuration deployment for Cisco IOS routers and switches using PowerShell and SSH.**
 
-This README explains what NetDeploy can do, how to install and use it, and how to make it work on your computer (change paths). The writing is easy to follow — even a beginner or a 10-year-old can get started.
+---
 
-## What NetDeploy does (in plain words)
-- Load device descriptions (IP addresses, usernames, interfaces, routing) from a single JSON file.
-- Check that each device description looks right (validation).
-- Create the list of commands needed to configure each device (the command builder).
-- Back up each device's current running configuration before changing anything.
-- Apply the commands over SSH (when you want to do the real thing).
-- Support safe DryRun mode that only shows what would happen (no network activity).
-- Run many device deployments in parallel, but grouped into named "runs" so logs are easy to find.
+## 1. What is NetDeploy?
 
-## Key features (quick list)
-- Single-file device data (JSON) loader and validator.
-- Build-only DryRun mode for safe previews.
-- Backup-before-deploy behavior.
-- Parallel deployments with throttling (limit concurrent jobs).
-- Per-run job logs: every run gets a named log file in `logs/jobs/` so you can find everything about a run quickly.
-- TUI (simple console UI) to select devices and start runs.
-- Easy path configuration so you can put logs/devices anywhere on your computer.
+NetDeploy is a PowerShell-based automation framework for deploying configurations to network devices in lab and production environments. It eliminates manual configuration tasks by:
 
-## How to get it and use it (step-by-step, copy/paste)
+- **Loading device configurations** from a centralized JSON file
+- **Validating** all configurations against device-type schemas
+- **Generating Cisco IOS commands** automatically from structured data
+- **Backing up** existing configurations before any changes
+- **Deploying via SSH** using PowerShell's Posh-SSH module
+- **Providing dry-run mode** for safe testing without touching devices
 
-1) Download the project
+### Key Benefits
 
-- Option A — clone with Git (recommended if you know Git):
+- ✅ **Infrastructure as Code**: Store network configs in version control (Git)
+- ✅ **Consistency**: Eliminate human typos and configuration drift
+- ✅ **Safety**: Automatic backups before deployment + dry-run preview
+- ✅ **Scalability**: Deploy to 1 device or 100 devices in parallel
+- ✅ **Auditability**: Complete logging of all operations with job-scoped logs
+- ✅ **Flexibility**: Interactive TUI or command-line automation
 
+### What It Supports
+
+**Device Types:**
+- Cisco IOS Routers (interfaces, OSPF, BGP, NAT, DHCP, DNS, ACLs)
+- Cisco IOS Switches (VLANs, trunk/access ports, SVIs, STP, EtherChannel)
+- Linux/Unix Hosts (basic network configuration templates)
+
+**Protocols & Features:**
+- OSPF routing with area and wildcard mask support
+- Static routes and default gateways
+- DHCP server pools with excluded addresses
+- NAT/PAT (inside/outside interfaces, static mappings, pools)
+- DNS configuration (domain name, name servers, host entries)
+- AAA local users with privilege levels
+- NTP, Syslog, ACLs
+- VTY line configuration for SSH access (prevents lockouts)
+
+---
+
+## 2. Project Structure & Capabilities
+
+---
+
+## 2. Project Structure & Capabilities
+
+### Directory Structure
+
+```
+NetDeploy/
+├── NetDeploy.psd1              # PowerShell module manifest
+├── NetDeploy.psm1              # Main module file (public API)
+├── README.md                   # This file
+├── core/                       # Core functionality modules
+│   ├── PathLoader.ps1          # Centralized path configuration
+│   ├── Utils.ps1               # Logging, validation, helpers (13 functions)
+│   ├── DeviceLoader.ps1        # JSON device loading (5 functions)
+│   ├── deviceValidator.ps1     # Configuration validation (5 functions)
+│   ├── CommandBuilder.ps1      # Cisco IOS command generation (7 functions)
+│   └── SSHDeploy.ps1           # SSH operations and deployment (5 functions)
+├── tui/                        # Text User Interface
+│   ├── DeploymentUI.ps1        # Main TUI entry point
+│   ├── Menu.ps1                # Menu display functions
+│   └── DeviceSelector.ps1      # Device selection logic
+├── configs/                    # Configuration files
+│   ├── devices/                
+│   │   └── devices.json        # Device configuration database (JSON)
+│   └── base-configs/           # Manual recovery configurations
+│       ├── R1-base.txt         # Router base configs (copy-paste ready)
+│       ├── R2-base.txt
+│       ├── R3-base.txt
+│       ├── S1-base-config.txt  # Switch base configs
+│       ├── S2-base-config.txt
+│       └── README.md           # Instructions for manual recovery
+├── schemas/                    # Device validation schemas (PSD1)
+│   ├── router-schema.psd1
+│   ├── switch-schema.psd1
+│   └── host-schema.psd1
+├── examples/                   # Example device configurations
+│   ├── router-example.psd1
+│   ├── switch-example.psd1
+│   └── host-example.psd1
+└── logs/                       # Runtime logs (auto-created)
+    ├── NetDeploy-YYYYMMDD.log  # Daily general log
+    ├── execution.log           # Legacy execution log
+    ├── jobs/                   # Per-run job logs
+    │   └── <RunName>-<timestamp>-<rand>.log
+    └── backups/                # Device configuration backups
+        └── <hostname>-<timestamp>.cfg
+```
+
+### Core Components
+
+#### PathLoader.ps1 (Centralized Configuration)
+- Defines all directory paths used by NetDeploy
+- Variables: `$script:NetDeployRoot`, `$script:NetDeployLogsDir`, `$script:NetDeployBackupsDir`, etc.
+- SSH defaults: Port 22, Timeout 10s, Retries 3
+- **Edit this file to change default paths globally**
+
+#### Utils.ps1 (13 utility functions)
+- `Write-Log` - Console and file logging with job context
+- `New-LogJob` / `Close-LogJob` - Job-scoped logging sessions
+- `Convert-MaskToWildcard` - Subnet to wildcard conversion for OSPF
+- `Test-ValidIP` - IP address validation
+- `Sort-DevicesForDeployment` - Orders devices (Routers → Switches → Hosts)
+- Additional helpers for validation, timing, credential creation
+
+#### DeviceLoader.ps1 (5 functions)
+- `Load-AllDevices` - Loads devices from JSON file or directory
+- `Load-DeviceByName` - Loads single device by hostname
+- `Merge-ConfigWithSchema` - Fills in defaults from schema
+- Supports both JSON array and `{devices: [...]}` format
+
+#### deviceValidator.ps1 (5 functions)
+- `Validate-Device` - Main validation dispatcher
+- `Validate-Router` - Router-specific validation (interfaces, OSPF, NAT, DHCP, DNS)
+- `Validate-Switch` - Switch-specific validation (VLANs, interfaces, SVIs)
+- `Validate-Host` - Host-specific validation (IP, gateway, DNS)
+- `Validate-AllDevices` - Batch validation
+
+#### CommandBuilder.ps1 (7 functions)
+- `Build-Commands` - Main dispatcher by device type
+- `Build-RouterCommands` - Generates complete router CLI commands
+  - Hostname, AAA users, interfaces, static routes, OSPF, NAT, DHCP, DNS
+  - NTP, Syslog, ACLs, **VTY lines for SSH**, console configuration
+- `Build-SwitchCommands` - Generates complete switch CLI commands
+  - VLANs, interfaces (access/trunk/routed), SVIs, default gateway
+  - Static routes, STP, DHCP relay, EtherChannel
+- `Build-HostCommands` - Linux/Unix host configuration templates
+
+#### SSHDeploy.ps1 (5 functions)
+- `Connect-SSH` - SSH connection with retry logic and auto-accept keys
+- `Backup-DeviceConfig` - Shell stream-based backup (5-second wait for complete output)
+- `Deploy-Device` - Single device deployment (backup → connect → deploy → cleanup)
+- `Deploy-AllDevices` - Multi-device orchestration (sequential or parallel)
+- **Uses SSH shell streams exclusively** (Invoke-SSHCommand incompatible with Cisco IOS)
+
+### Public API Functions (NetDeploy.psm1)
+
+| Function | Purpose |
+|----------|---------|
+| `Invoke-DeviceDeployment` | Deploy configuration to single device |
+| `Invoke-AllDeviceDeployment` | Deploy to multiple devices (sequential or parallel) |
+| `Load-Devices` | Load device configurations from JSON |
+| `Test-AllDevices` | Validate all device configurations |
+| `Set-NetDeployPaths` | Configure custom paths for logs/backups/devices |
+| `Get-NetDeployPaths` | Retrieve current path configuration |
+
+### What You Can Do With NetDeploy
+
+1. **Single Device Deployment**
+   - Deploy to one router/switch with full backup and logging
+   - Dry-run preview before actual deployment
+   - Custom command delays between commands
+
+2. **Multi-Device Deployment**
+   - Deploy to multiple devices sequentially or in parallel
+   - Throttle concurrent jobs (default: 10 max)
+   - Single job log for entire deployment run
+   - Named runs for easy log identification
+
+3. **Interactive TUI**
+   - Menu-driven device selection
+   - Visual device list with filtering options
+   - Deployment mode selection (sequential/parallel)
+   - View recent backups and job logs
+   - Dry-run confirmation prompts
+
+4. **Configuration Management**
+   - Store all device configs in version control (Git)
+   - JSON-based device definitions
+   - Schema validation before deployment
+   - Automatic backup before changes
+
+5. **Logging & Auditing**
+   - Daily general logs (`NetDeploy-YYYYMMDD.log`)
+   - Per-run job logs with timestamps
+   - Device configuration backups with timestamps
+   - Complete command execution traces
+
+6. **Recovery & Safety**
+   - Base configuration files for manual recovery
+   - SSH lockout prevention (VTY line auto-config)
+   - Dry-run mode for testing
+   - Backup-before-deploy workflow
+
+---
+
+## 3. How to Use NetDeploy (Complete Walkthrough)
+
+---
+
+## 3. How to Use NetDeploy (Complete Walkthrough)
+
+### Prerequisites
+
+**Required:**
+- PowerShell 7+ (pwsh) - [Download here](https://github.com/PowerShell/PowerShell/releases)
+- Posh-SSH module for SSH connectivity
+
+**Install Posh-SSH:**
+```powershell
+Install-Module -Name Posh-SSH -Scope CurrentUser -Force
+```
+
+**Verify installation:**
+```powershell
+Get-Module -ListAvailable Posh-SSH
+```
+
+---
+
+### Step 1: Download NetDeploy
+
+**Option A: Git Clone (Recommended)**
 ```powershell
 git clone https://github.com/nilskele/NetDeploy.git
 cd NetDeploy
 ```
 
-- Option B — download the ZIP from GitHub and unzip it somewhere you like.
-
-2) Import the module into PowerShell
-
-Open PowerShell (pwsh) and run:
-
-```powershell
-# From the repository root
-Import-Module -Force ./NetDeploy.psd1 -Verbose
-```
-
-3) Try a safe DryRun (no devices changed)
-
-```powershell
-# Load devices (module uses the configured devices path or repo default)
-$devices = Load-Devices
-
-# See the first device and run a dry-run
-$devices[0] | Select-Object Hostname, DeviceType, ManagementIP
-Invoke-DeviceDeployment -Device $devices[0] -DryRun -RunName 'my-first-dryrun'
-```
-
-4) Try the interactive UI
-
-```powershell
-# Start the simple menu-driven UI
-pwsh -NoProfile -File ./tui/DeploymentUI.ps1
-```
-
-The UI will ask which devices to deploy, whether to run in parallel, and an optional run name. If you pick DryRun the tool will only show what it would do.
-
-## Logs and how runs are grouped
-
-Every run (single-device or multi-device) gets a run name and a unique timestamp. NetDeploy writes:
-
-- A main log: `logs/NetDeploy-YYYYMMDD.log` where general events and START/END markers are written.
-- A per-run job log: `logs/jobs/<RunName>-<timestamp>-<rand>.log` that contains all messages for that run (very handy for instructors and debugging).
-
-Example: if you run `Invoke-AllDeviceDeployment -RunName 'lab1'` you'll see a job log like `logs/jobs/lab1-20251216-171348-2318.log` that contains everything the run did.
-
-You can inspect logs with simple commands:
-
-```powershell
-Get-ChildItem -Path ./logs/jobs -File | Sort-Object LastWriteTime -Descending
-Get-Content -Path ./logs/jobs/<that-file>.log -Tail 200
-```
-
-## Make NetDeploy use folders on your own computer
-
-You don't have to keep device files or logs inside the project. To tell NetDeploy where to look and where to write, use these helpers:
-
-```powershell
-# After importing the module
-Set-NetDeployPaths -DevicesPath 'C:\my-labs\devices' -LogsPath 'C:\my-labs\logs' -JobsPath 'C:\my-labs\logs\jobs' -BackupsPath 'C:\my-labs\logs\backups'
-
-# Check what is configured
-Get-NetDeployPaths | Format-List
-```
-
-If you prefer, you can set the globals before importing the module so they are applied immediately:
-
-```powershell
-$Global:NetDeployDevicesPath = 'C:\my-labs\devices'
-$Global:NetDeployLogDir = 'C:\my-labs\logs'
-$Global:NetDeployJobsDir = 'C:\my-labs\logs\jobs'
-Import-Module -Force ./NetDeploy.psd1
-```
-
-NetDeploy will create the folders if they don't exist.
-
-## Parallel runs and throttling (keeping things safe)
-
-NetDeploy can deploy to many devices at once. To avoid using too many resources, it runs devices in batches. You can control how many devices run at the same time with the `-Throttle` parameter (default 10).
-
-Example: run up to 5 devices at once in a dry-run:
-
-```powershell
-$sel = $devices[0..9]
-Invoke-AllDeviceDeployment -Devices $sel -Parallel -Throttle 5 -DryRun -RunName 'parallel-test'
-```
-
-Each batch will start jobs, wait for them to finish, and then continue with the next batch. All jobs in the same run write to the same per-run job log.
-
-## Simple explanations (for beginners / kids)
-
-- "Device file" = a small file that says what a router or switch has (IP, name, interfaces).
-- "DryRun" = a preview button — shows what will happen but doesn't touch anything.
-- "Run name" = a label you give a group of changes so you can find them later in the logs.
-- "Throttle" = how many devices to work on at the same time (smaller numbers = safer for tiny computers).
-
-## Commands you will use most often
-
-- Load devices: `Load-Devices` (optionally `-Path` to a folder or single JSON file)
-- Run single-device dry-run: `Invoke-DeviceDeployment -Device <obj> -DryRun -RunName 'name'`
-- Run many devices (parallel): `Invoke-AllDeviceDeployment -Devices <array> -Parallel -Throttle 10 -RunName 'name'`
-- Change paths: `Set-NetDeployPaths -DevicesPath <path> -LogsPath <path> -JobsPath <path> -BackupsPath <path>`
-- Show paths: `Get-NetDeployPaths`
-
-## Next steps and extras you might like
-
-- Add a tiny config file so `Set-NetDeployPaths` is remembered between sessions (I can add this).
-- Add a small TUI menu to list recent job logs and open one (I can add this too).
-- Switch from Start-Job to a runspace pool if you need extreme performance for hundreds of devices.
+**Option B: Download ZIP**
+1. Download from GitHub: `Code` → `Download ZIP`
+2. Extract to desired location
+3. Open PowerShell in extracted directory
 
 ---
 
-## Sources
+### Step 2: Import the Module
 
+From the NetDeploy directory:
 
-
-Prerequisites
-	```powershell
-	Install-Module -Name Posh-SSH -Scope CurrentUser
-	```
-
-A. Non-interactive DryRun (safe and recommended)
-
-This flow mirrors what the TUI does but runs step-by-step in your shell. DryRun will build the command list and show the intended backup path without opening SSH connections or writing files.
-
-1) Import the module (from the repo root)
 ```powershell
-# Option A: import the manifest (loads the module as-packaged)
+# Import module manifest (recommended)
 Import-Module -Force ./NetDeploy.psd1 -Verbose
 
-# Option B: import the module file directly while developing
-# Import-Module -Force ./NetDeploy.psm1 -Verbose
+# Verify module loaded
+Get-Module NetDeploy
 
-# Verify exported functions (optional)
-Get-Command -Module NetDeploy -CommandType Function
+# List available commands
+Get-Command -Module NetDeploy
 ```
 
-### Custom paths
+**Output:**
+```
+CommandType     Name                           Version    Source
+-----------     ----                           -------    ------
+Function        Get-NetDeployPaths            1.0        NetDeploy
+Function        Invoke-AllDeviceDeployment    1.0        NetDeploy
+Function        Invoke-DeviceDeployment       1.0        NetDeploy
+Function        Load-Devices                  1.0        NetDeploy
+Function        Set-NetDeployPaths            1.0        NetDeploy
+Function        Test-AllDevices               1.0        NetDeploy
+```
 
-You can override the default log, job, backup and device folder locations at runtime using the exported helpers:
+---
+
+### Step 3: Configure Paths (Optional but Recommended)
+
+**Default Paths:**
+NetDeploy uses these paths relative to the module root by default:
+- Devices: `configs/devices/`
+- Logs: `logs/`
+- Backups: `logs/backups/`
+- Jobs: `logs/jobs/`
+
+**To customize paths:**
 
 ```powershell
-# Set custom directories (relative or absolute)
-Set-NetDeployPaths -LogsPath './my-logs' -JobsPath './my-logs/jobs' -BackupsPath './my-logs/backups' -DevicesPath './configs/devices'
+# Set custom directories (absolute or relative paths)
+Set-NetDeployPaths `
+    -DevicesPath "C:\NetworkLab\devices" `
+    -LogsPath "C:\NetworkLab\logs" `
+    -BackupsPath "C:\NetworkLab\logs\backups" `
+    -JobsPath "C:\NetworkLab\logs\jobs"
 
-# Verify
+# Verify configuration
 Get-NetDeployPaths | Format-List
 ```
 
-After calling `Set-NetDeployPaths` future runs (including background jobs) will write logs into your configured directories.
+**Where to find path configuration:**
+- Paths are defined in: `core/PathLoader.ps1`
+- Edit this file to change default paths permanently
+- Variables: `$script:NetDeployDevicesDir`, `$script:NetDeployLogsDir`, etc.
 
-2) Load device configurations
-```powershell
-# Load all device PSD1 files (returns an array of PSCustomObject devices)
-$devices = Load-Devices -Path ./configs/devices
+**Path configuration is loaded automatically** when you import the module.
 
-# Quick summary view
-$devices | Select-Object Hostname, DeviceType, ManagementIP, @{Name='HasCreds';Expression={$_.Credentials -ne $null}}
+---
 
-# Pick a device by hostname (or use index from the list)
-$d = $devices | Where-Object Hostname -eq 'R1'
+### Step 4: Prepare Device Configurations
+
+**Device configuration file:** `configs/devices/devices.json`
+
+This JSON file contains all your network devices. Example structure:
+
+```json
+[
+  {
+    "Hostname": "R1",
+    "DeviceType": "Router",
+    "ManagementIP": "192.168.1.1",
+    "SSHPort": 22,
+    "Credentials": {
+      "Username": "admin",
+      "Password": "cisco"
+    },
+    "Interfaces": [
+      {
+        "Name": "GigabitEthernet0/0",
+        "IP": "192.168.1.1",
+        "Mask": "255.255.255.0",
+        "Description": "Management",
+        "Status": "up"
+      }
+    ],
+    "Routing": {
+      "OSPF": {
+        "Enabled": true,
+        "ProcessID": 1,
+        "RouterID": "1.1.1.1",
+        "Networks": [
+          {
+            "Network": "192.168.1.0",
+            "Mask": "255.255.255.0",
+            "Area": 0
+          }
+        ]
+      }
+    }
+  }
+]
 ```
 
-3) Run a DryRun for a single device
+**See example files:**
+- `examples/router-example.psd1`
+- `examples/switch-example.psd1`
+- `examples/host-example.psd1`
+
+---
+
+### Step 5A: Use the Interactive TUI (Easiest)
+
+**Launch the TUI:**
 ```powershell
-# DryRun previews backup path and commands; it does NOT perform SSH or write backup files.
-Invoke-DeviceDeployment -Device $d -DryRun -Verbose
+pwsh -NoProfile -File ./tui/DeploymentUI.ps1
 ```
 
-4) DryRun all devices at once (non-interactive)
+**TUI Workflow:**
+
+1. **Main Menu** appears with options:
+   - `[1] Deploy devices`
+   - `[2] Show loaded devices`
+   - `[3] List recent backups`
+   - `[4] View a backup`
+   - `[5] Exit`
+
+2. **Select option 1** to deploy
+
+3. **Device Selection Screen**:
+   ```
+   Select devices to operate on:
+   [1] R1 [Router] (192.168.1.1)
+   [2] R2 [Router] (10.0.2.2)
+   [3] S1 [Switch] (10.2.0.10)
+   
+   Selection: 1,3        # Deploy to R1 and S1
+   Selection: all        # Deploy to all devices
+   Selection: 2-3        # Deploy to R2 and S1 (range)
+   ```
+
+4. **Deployment Mode**:
+   ```
+   [1] Sequential (one-by-one)
+   [2] Parallel (start a job per device)
+   Select mode: 2
+   ```
+
+5. **Parallel Settings** (if parallel selected):
+   ```
+   Enter throttle (max concurrent jobs) [default 10]: 5
+   ```
+
+6. **Dry-Run Confirmation**:
+   ```
+   Perform dry-run only? [Y/n] (default Y): Y
+   ```
+   - `Y` = Preview only (safe, no devices touched)
+   - `n` = Live deployment (backs up and applies changes)
+
+7. **Run Name** (optional):
+   ```
+   Enter a name for this run: lab-deployment-01
+   ```
+
+8. **Final Confirmation**:
+   ```
+   About to deploy 2 device(s). Mode: Parallel
+   Concurrency (throttle): 5
+   DryRun: True
+   Continue? [y/N]: y
+   ```
+
+9. **Deployment executes** - watch progress in real-time
+
+10. **Check logs:**
+    ```
+    logs/jobs/lab-deployment-01-20251222-143052-8472.log
+    ```
+
+---
+
+### Step 5B: Use Command-Line API (Advanced)
+
+**Load Devices:**
 ```powershell
-$results = Deploy-AllDevices -Devices $devices -DryRun
-# Inspect per-host previews (backup path + commands)
-$results.GetEnumerator() | ForEach-Object {
-	$host = $_.Key; $obj = $_.Value
-	"=== $host ==="
-	"Backup: $($obj.BackupPath)"
-	($obj.Commands -join "`n")
-}
+# Load all devices from default location
+$devices = Load-Devices
+
+# Or specify custom path
+$devices = Load-Devices -Path "./configs/devices/devices.json"
+
+# View loaded devices
+$devices | Select-Object Hostname, DeviceType, ManagementIP | Format-Table
 ```
 
-Notes about DryRun
-- DryRun returns intended backup paths (typically under `logs/backups/`) and the full command list, but it does not modify devices or write files.
-- Use `ConvertTo-Json` if you want machine-readable output: `Invoke-DeviceDeployment -Device $d -DryRun | ConvertTo-Json -Depth 6`.
-
-B. Interactive TUI (live deployments)
-
-The TUI provides a simple console-driven flow to select devices and run deployments. The TUI calls the module's public APIs and will perform backups and SSH commands during deployments.
-
-1) Start the TUI from the repository root
+**Single Device Dry-Run:**
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File ./tui/DeploymentUI.ps1
+# Get first device
+$device = $devices[0]
+
+# Preview deployment (no changes made)
+Invoke-DeviceDeployment -Device $device -DryRun -RunName "test-dryrun"
 ```
 
-2) What to expect in the TUI
-- On start the TUI will load `.psd1` files from `./configs/devices`.
-- The main menu shows two options: `Deploy devices` and `Exit`.
-- Choose `Deploy devices` to open the device selector. The selector lists `ALL DEVICES` followed by each device (Hostname + DeviceType). Select a device or ALL to continue.
+**Single Device Live Deployment:**
+```powershell
+# Deploy with backup and 1-second command delay
+Invoke-DeviceDeployment `
+    -Device $device `
+    -CommandDelay 1 `
+    -RunName "router-r1-deploy"
+```
 
-3) Deploy flow inside the TUI (live)
-- After selecting devices the TUI calls `Invoke-AllDeviceDeployment -Devices <selection>`.
-- For each selected device the live flow attempts to:
-	1. Backup running-config to `logs/backups/<hostname>-<timestamp>.cfg` (if backup fails the device is skipped).
-	2. Open an SSH session using `Posh-SSH` and send the generated CLI commands.
+**Multi-Device Sequential Deployment:**
+```powershell
+# Deploy to multiple devices one at a time
+$selectedDevices = $devices | Where-Object { $_.DeviceType -eq "Router" }
 
-## Sources
+Invoke-AllDeviceDeployment `
+    -Devices $selectedDevices `
+    -CommandDelay 1 `
+    -RunName "all-routers-deploy"
+```
 
-- Posh-SSH (GitHub):
-	https://github.com/darkoperator/Posh-SSH
+**Multi-Device Parallel Deployment:**
+```powershell
+# Deploy to all devices in parallel (max 5 concurrent)
+Invoke-AllDeviceDeployment `
+    -Devices $devices `
+    -Parallel `
+    -Throttle 5 `
+    -RunName "full-network-deploy"
+```
 
-- Adam the Automator — practical PowerShell tutorials and module authoring guides.:
-	https://adamtheautomator.com
+**Validate Configurations Before Deployment:**
+```powershell
+# Validate all device configs
+Test-AllDevices -Folder "./configs/devices"
 
-- Jeff Hicks — in-depth PowerShell articles and real-world examples:
-	https://jdhitsolutions.com
+# Validation checks:
+# - Required fields present
+# - Valid IP addresses
+# - OSPF configuration correctness
+# - VLAN IDs in valid range
+# - Interface configurations
+```
 
-- PowerShell.org - community articles, blog posts and long-form tutorials about advanced scripting and module design:
-	https://powershell.org
+---
 
-- Network to Code — network automation patterns, examples, and tutorials:
-	https://networktocode.com
+### Step 6: Understanding Logs
 
-- David Bombal (YouTube) hands-on network lab videos including Cisco IOS examples and automation demos:
-	https://www.youtube.com/c/DavidBombal
+**Log Files:**
 
-- NetworkChuck (YouTube) network automation and lab tutorials that show building topologies and automating tasks:
-	https://www.youtube.com/c/NetworkChuck
+1. **Daily General Log:**
+   - Location: `logs/NetDeploy-YYYYMMDD.log`
+   - Contains: All general events, START/END markers
 
-- Reddit communities:
-	r/PowerShell: https://www.reddit.com/r/PowerShell/
-	r/networking: https://www.reddit.com/r/networking/
+2. **Per-Run Job Logs:**
+   - Location: `logs/jobs/<RunName>-<timestamp>-<rand>.log`
+   - Contains: All operations for that specific deployment run
+   - Example: `logs/jobs/lab-deploy-20251222-143052-8472.log`
 
-- GitHub automation repos combining PowerShell with Posh-SSH:
-	https://github.com/search?q=posh-ssh+network+automation
+3. **Device Backups:**
+   - Location: `logs/backups/<hostname>-<timestamp>.cfg`
+   - Contains: Running-config backup before deployment
+   - Example: `logs/backups/R1-20251222-143105.cfg`
 
-- Developer/blog:
-	Dev.to (PowerShell tag): https://dev.to/t/powershell
-	Medium (PowerShell topic): https://medium.com/tag/powershell
+**View Recent Logs:**
+```powershell
+# List job logs (newest first)
+Get-ChildItem -Path ./logs/jobs -File | 
+    Sort-Object LastWriteTime -Descending | 
+    Select-Object -First 10 Name, LastWriteTime
+
+# View specific log
+Get-Content -Path ./logs/jobs/lab-deploy-20251222-143052-8472.log
+
+# Tail last 50 lines
+Get-Content -Path ./logs/jobs/lab-deploy-20251222-143052-8472.log -Tail 50
+
+# Search logs for errors
+Get-Content -Path ./logs/jobs/*.log | Select-String -Pattern "ERROR|WARN"
+```
+
+---
+
+### Step 7: Recovery & Manual Configuration
+
+**If SSH access is lost after deployment:**
+
+1. **Use base configuration files:**
+   - Location: `configs/base-configs/`
+   - Files: `R1-base.txt`, `R2-base.txt`, `R3-base.txt`, etc.
+
+2. **Apply via console:**
+   - Open GNS3 console for device
+   - Enter privileged mode: `enable`
+   - Copy entire base config file
+   - Paste into console
+   - Wait for execution
+   - Verify: `show run | include vty`
+
+3. **Base configs include:**
+   - VTY line configuration (SSH access)
+   - Local user accounts
+   - Interface configurations
+   - OSPF routing
+   - All necessary for connectivity
+
+**See:** `configs/base-configs/README.md` for detailed recovery instructions.
+
+---
+
+### Common Parameters Reference
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `-Device` | Object | Single device object to deploy | Required |
+| `-Devices` | Array | Multiple device objects to deploy | Required |
+| `-DryRun` | Switch | Preview only, no actual deployment | False (live) |
+| `-Parallel` | Switch | Deploy devices concurrently | False (sequential) |
+| `-Throttle` | Int | Max concurrent jobs in parallel mode | 10 |
+| `-CommandDelay` | Int | Seconds between commands | 0 |
+| `-RunName` | String | Custom name for job log | Auto-generated |
+| `-Path` | String | Custom path to devices file/folder | Default path |
+
+---
+
+### Advanced Usage Examples
+
+**Filter and deploy specific device types:**
+```powershell
+# Deploy only routers
+$routers = $devices | Where-Object { $_.DeviceType -eq "Router" }
+Invoke-AllDeviceDeployment -Devices $routers -RunName "routers-only"
+
+# Deploy devices by hostname pattern
+$borderRouters = $devices | Where-Object { $_.Hostname -like "BR*" }
+Invoke-AllDeviceDeployment -Devices $borderRouters -Parallel
+```
+
+**Dry-run with detailed output:**
+```powershell
+Invoke-DeviceDeployment -Device $devices[0] -DryRun -Verbose | 
+    ConvertTo-Json -Depth 10 | 
+    Out-File -FilePath "./preview.json"
+```
+
+**Schedule automated deployments:**
+```powershell
+# Create scheduled task (Windows)
+$action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-File C:\NetDeploy\deploy-script.ps1"
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am
+Register-ScheduledTask -TaskName "NetDeploy-Nightly" -Action $action -Trigger $trigger
+```
+
+**Git integration for configuration management:**
+```bash
+# After editing devices.json
+git add configs/devices/devices.json
+git commit -m "Updated R1 OSPF configuration"
+git push origin main
+
+# Deploy from specific git commit
+git checkout abc123
+pwsh -File deploy.ps1
+```
+
+---
+
+## 4. Sources & References
+
+---
+
+## 4. Sources & References
+
+### PowerShell & SSH
+
+- **Posh-SSH** - PowerShell SSH module used for all SSH operations  
+  GitHub: [https://github.com/darkoperator/Posh-SSH](https://github.com/darkoperator/Posh-SSH)  
+  Documentation: [https://www.powershellgallery.com/packages/Posh-SSH](https://www.powershellgallery.com/packages/Posh-SSH)
+
+- **PowerShell 7+ Official Documentation**  
+  [https://docs.microsoft.com/powershell](https://docs.microsoft.com/powershell)
+
+### PowerShell Learning Resources
+
+- **Adam the Automator** - Practical PowerShell tutorials and module authoring  
+  [https://adamtheautomator.com](https://adamtheautomator.com)
+
+- **Jeff Hicks** - In-depth PowerShell articles and real-world examples  
+  [https://jdhitsolutions.com](https://jdhitsolutions.com)
+
+- **PowerShell.org** - Community articles, blog posts, and advanced scripting tutorials  
+  [https://powershell.org](https://powershell.org)
+
+### Network Automation
+
+- **Network to Code** - Network automation patterns, examples, and best practices  
+  [https://networktocode.com](https://networktocode.com)
+
+- **Cisco IOS Command Reference**  
+  [https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html)
+
+### Video Tutorials & Labs
+
+- **David Bombal (YouTube)** - Network lab videos, Cisco IOS, and automation demos  
+  [https://www.youtube.com/c/DavidBombal](https://www.youtube.com/c/DavidBombal)
+
+- **NetworkChuck (YouTube)** - Network automation and lab setup tutorials  
+  [https://www.youtube.com/c/NetworkChuck](https://www.youtube.com/c/NetworkChuck)
+
+### Community & Forums
+
+- **r/PowerShell** - PowerShell community discussion  
+  [https://www.reddit.com/r/PowerShell/](https://www.reddit.com/r/PowerShell/)
+
+- **r/networking** - Networking professionals and automation discussions  
+  [https://www.reddit.com/r/networking/](https://www.reddit.com/r/networking/)
+
+- **r/Cisco** - Cisco-specific configuration and troubleshooting  
+  [https://www.reddit.com/r/Cisco/](https://www.reddit.com/r/Cisco/)
+
+### Development Resources
+
+- **Dev.to (PowerShell tag)** - PowerShell articles and tutorials  
+  [https://dev.to/t/powershell](https://dev.to/t/powershell)
+
+- **Medium (PowerShell topic)** - Long-form PowerShell content  
+  [https://medium.com/tag/powershell](https://medium.com/tag/powershell)
+
+### GitHub Examples
+
+- **Network Automation with Posh-SSH** - Example repositories  
+  [https://github.com/search?q=posh-ssh+network+automation](https://github.com/search?q=posh-ssh+network+automation)
+
+- **Cisco IOS Automation Examples**  
+  [https://github.com/search?q=cisco+ios+automation](https://github.com/search?q=cisco+ios+automation)
+
+---
+
+## License
+
+This project is provided as-is for educational and laboratory use. See LICENSE file for details.
+
+## Contributing
+
+Contributions welcome! Please open an issue or pull request on GitHub.
+
+## Support
+
+For issues, questions, or feature requests, please open an issue on GitHub:  
+[https://github.com/nilskele/NetDeploy/issues](https://github.com/nilskele/NetDeploy/issues)
 
 
 
