@@ -504,7 +504,23 @@ function Build-HostCommands {
     .SYNOPSIS
         Builds configuration commands for host devices from templates.
     
-    .DESCRIPTION\n        Generates Linux/Unix host configuration commands including static IP setup,\n        gateway configuration, and DNS settings. Returns shell commands for host provisioning.\n    \n    .PARAMETER Config\n        The host configuration object containing IP, mask, gateway, DNS settings.\n    \n    .EXAMPLE\n        $commands = Build-HostCommands -Config $hostConfig\n        \n        Returns shell commands for host network configuration.\n    \n    .NOTES\n        18/12/2025 - v1.0 - Initial version - NetDeploy Project\n    #>\n    \n    param([Parameter(Mandatory)] $Config)
+    .DESCRIPTION
+        Generates Linux/Unix host configuration commands including static IP setup,
+        gateway configuration, and DNS settings. Returns shell commands for host provisioning.
+    
+    .PARAMETER Config
+        The host configuration object containing IP, mask, gateway, DNS settings.
+    
+    .EXAMPLE
+        $commands = Build-HostCommands -Config $hostConfig
+        
+        Returns shell commands for host network configuration.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
+    param([Parameter(Mandatory)] $Config)
 
     Write-Log "Building host provisioning template for $($Config.Hostname)" -Level DEBUG
 
@@ -538,15 +554,20 @@ function Build-Commands {
     .DESCRIPTION
         Delegates to device-type specific builders (router, switch, host) based on DeviceType property.
         This is the primary function called by deployment scripts to generate command lists.
-    \n    .PARAMETER Device
+    
+    .PARAMETER Device
         The device object containing DeviceType and configuration settings.
-    \n    .EXAMPLE
+    
+    .EXAMPLE
         $commands = Build-Commands -Device $deviceObject
-        \n        Generates appropriate command array based on device type.
-    \n    .NOTES
+        
+        Generates appropriate command array based on device type.
+    
+    .NOTES
         18/12/2025 - v1.0 - Initial version - NetDeploy Project
     #>
-    \n    param([Parameter(Mandatory)] $Device)
+    
+    param([Parameter(Mandatory)] $Device)
 
     switch ($Device.DeviceType.ToLower()) {
         "router" { return Build-RouterCommands -Config $Device }
