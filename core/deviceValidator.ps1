@@ -25,6 +25,32 @@ function Test-ValidIP {
 # Validate Router config
 # ------------------------------------------------------
 function Validate-Router {
+    <#
+    .SYNOPSIS
+        Validates router configuration object.
+    
+    .DESCRIPTION
+        Ensures router configuration has valid:
+        - Interface definitions (Name, IP, Mask)
+        - OSPF settings (if enabled: ProcessID, Networks, Areas)
+        - DHCP pools (if enabled: Name, Network, Mask, DNS)
+        - DNS configuration (if enabled: DomainName, DNSServers)
+        - NAT settings (if enabled: Inside/Outside interfaces, Static rules)
+        
+        Throws exception if any validation fails.
+    
+    .PARAMETER Device
+        Router device object to validate.
+    
+    .EXAMPLE
+        Validate-Router -Device $routerConfig
+        
+        Validates router configuration structure and values.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param($Device)
 
     Write-Log "Validating router: $($Device.Hostname)" -Level DEBUG
@@ -172,6 +198,31 @@ function Validate-Router {
 # Validate Switch config
 # ------------------------------------------------------
 function Validate-Switch {
+    <#
+    .SYNOPSIS
+        Validates switch configuration object.
+    
+    .DESCRIPTION
+        Ensures switch configuration has valid:
+        - VLAN definitions (ID range 1-4094)
+        - Interface configurations (Name, Mode)
+        - Access ports (VLAN assignment)
+        - Trunk ports (Allowed VLANs)
+        
+        Throws exception if any validation fails.
+    
+    .PARAMETER Device
+        Switch device object to validate.
+    
+    .EXAMPLE
+        Validate-Switch -Device $switchConfig
+        
+        Validates switch configuration structure and values.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param($Device)
 
     Write-Log "Validating switch: $($Device.Hostname)" -Level DEBUG
@@ -220,6 +271,31 @@ function Validate-Switch {
 # Validate Host config
 # ------------------------------------------------------
 function Validate-Host {
+    <#
+    .SYNOPSIS
+        Validates host configuration object.
+    
+    .DESCRIPTION
+        Ensures host configuration has valid:
+        - IP address
+        - Subnet mask
+        - Default gateway
+        - DNS servers
+        
+        Throws exception if any validation fails.
+    
+    .PARAMETER Device
+        Host device object to validate.
+    
+    .EXAMPLE
+        Validate-Host -Device $hostConfig
+        
+        Validates host configuration structure and values.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param($Device)
 
     Write-Log "Validating host: $($Device.Hostname)" -Level DEBUG
@@ -245,6 +321,30 @@ function Validate-Host {
 # Validation Dispatcher
 # ------------------------------------------------------
 function Validate-Device {
+    <#
+    .SYNOPSIS
+        Validates a single device configuration.
+    
+    .DESCRIPTION
+        Main validation dispatcher that:
+        1. Validates common required fields (Hostname, DeviceType, ManagementIP, Credentials)
+        2. Validates ManagementIP format
+        3. Delegates to type-specific validator (Router/Switch/Host)
+        
+        Throws exception if validation fails.
+    
+    .PARAMETER Device
+        Device object to validate.
+    
+    .EXAMPLE
+        Validate-Device -Device $device
+        
+        Validates device configuration based on DeviceType.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)] $Device)
 
     Write-Log "Validating device: $($Device.Hostname)"
@@ -277,6 +377,26 @@ function Validate-Device {
 # Validate list of devices
 # ------------------------------------------------------
 function Validate-AllDevices {
+    <#
+    .SYNOPSIS
+        Validates multiple device configurations.
+    
+    .DESCRIPTION
+        Iterates through device list and validates each device.
+        Stops at first validation error.
+    
+    .PARAMETER DeviceList
+        Array of device objects to validate.
+    
+    .EXAMPLE
+        Validate-AllDevices -DeviceList $devices
+        
+        Validates all devices in the list.
+    
+    .NOTES
+        18/12/2025 - v1.0 - Initial version - NetDeploy Project
+    #>
+    
     param([Parameter(Mandatory)] $DeviceList)
 
     foreach ($device in $DeviceList) {
