@@ -77,10 +77,6 @@ NetDeploy/
 │       ├── S1-base-config.txt  # Switch base configs
 │       ├── S2-base-config.txt
 │       └── README.md           # Instructions for manual recovery
-├── schemas/                    # Device validation schemas (PSD1)
-│   ├── router-schema.psd1
-│   ├── switch-schema.psd1
-│   └── host-schema.psd1
 ├── examples/                   # Example device configurations
 │   ├── router-example.psd1
 │   ├── switch-example.psd1
@@ -113,8 +109,9 @@ NetDeploy/
 #### DeviceLoader.ps1 (5 functions)
 - `Load-AllDevices` - Loads devices from JSON file or directory
 - `Load-DeviceByName` - Loads single device by hostname
-- `Merge-ConfigWithSchema` - Fills in defaults from schema
+- `Merge-ConfigWithSchema` - Fills in defaults from inline schema templates
 - Supports both JSON array and `{devices: [...]}` format
+- Default schemas defined inline: `$Global:DefaultRouterSchema`, `$Global:DefaultSwitchSchema`, `$Global:DefaultHostSchema`
 
 #### deviceValidator.ps1 (5 functions)
 - `Validate-Device` - Main validation dispatcher
@@ -122,6 +119,7 @@ NetDeploy/
 - `Validate-Switch` - Switch-specific validation (VLANs, interfaces, SVIs)
 - `Validate-Host` - Host-specific validation (IP, gateway, DNS)
 - `Validate-AllDevices` - Batch validation
+- **Note:** Validation rules are defined inline in this file, not loaded from schemas/ folder
 
 #### CommandBuilder.ps1 (7 functions)
 - `Build-Commands` - Main dispatcher by device type
@@ -251,23 +249,6 @@ NetDeploy requires IP reachability from the machine running the script to every 
    ping 10.3.0.10        # S2
    ```
 
-3. **VPN or Jump Host:**
-   - Connect to lab network via VPN
-   - Or run NetDeploy from a jump host inside the network
-
-**Test connectivity before deployment:**
-```powershell
-# Test SSH connectivity to each device
-$devices = Load-Devices
-foreach ($device in $devices) {
-    Write-Host "Testing $($device.Hostname) at $($device.ManagementIP)..." -NoNewline
-    if (Test-Connection -ComputerName $device.ManagementIP -Count 1 -Quiet) {
-        Write-Host " OK" -ForegroundColor Green
-    } else {
-        Write-Host " FAILED" -ForegroundColor Red
-    }
-}
-```
 
 ---
 
@@ -680,20 +661,9 @@ pwsh -File deploy.ps1
 
 - **Network to Code** - Network automation patterns, examples, and best practices  
   [https://networktocode.com](https://networktocode.com)
-  
-https://blog.paessler.com/know-your-network-with-powershell-and-tcp
 
-https://www.reddit.com/r/PowerShell/comments/6d1jph/powershell_for_network_automation/
-
-
-### Dry-Run
-https://stackoverflow.com/questions/11211518/how-to-use-dry-run-in-powershell
-https://news.ycombinator.com/item?id=39275348
-
-### convert hashtable to object
-https://stackoverflow.com/questions/73894087/how-do-i-convert-a-powershell-hashtable-to-an-object
-
-###
+- **Cisco IOS Command Reference**  
+  [https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/cf_command_ref.html)
 
 ### Video Tutorials & Labs
 
