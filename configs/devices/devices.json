@@ -6,9 +6,9 @@
     "SSHPort": 22,
     "Credentials": { "Username": "admin", "Password": "cisco" },
     "Interfaces": [
-      { "Name": "GigabitEthernet0/0", "Description": "Management_Internet", "IP": "192.168.122.254", "Mask": "255.255.255.0", "Status": "up" },
-      { "Name": "GigabitEthernet0/1", "Description": "Link_to_R3", "IP": "10.0.1.1", "Mask": "255.255.255.252", "Status": "up" },
-      { "Name": "GigabitEthernet0/2", "Description": "Link_to_R2", "IP": "10.0.2.1", "Mask": "255.255.255.252", "Status": "up" }
+      { "Name": "GigabitEthernet0/0", "Description": "LAN_Internet", "IP": "192.168.122.254", "Mask": "255.255.255.0", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "Link_to_R2", "IP": "10.0.12.1", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/2", "Description": "Link_to_R3", "IP": "10.0.13.1", "Mask": "255.255.255.252", "Status": "up" }
     ],
     "Routing": {
       "OSPF": {
@@ -16,11 +16,14 @@
         "ProcessID": 1,
         "RouterID": "1.1.1.1",
         "Networks": [
-          { "Network": "10.0.1.0", "Mask": "255.255.255.252", "Area": 0 },
-          { "Network": "10.0.2.0", "Mask": "255.255.255.252", "Area": 0 }
+          { "Network": "10.0.12.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.0.13.0", "Mask": "255.255.255.252", "Area": 0 }
         ]
       },
-      "StaticRoutes": []
+      "StaticRoutes": [
+        { "Network": "10.0.20.0", "Mask": "255.255.255.0", "NextHop": "10.0.12.2" },
+        { "Network": "10.0.30.0", "Mask": "255.255.255.0", "NextHop": "10.0.13.2" }
+      ]
     },
     "NAT": {
       "Enabled": false,
@@ -49,12 +52,12 @@
   {
     "Hostname": "R2",
     "DeviceType": "Router",
-    "ManagementIP": "10.0.2.2",
+    "ManagementIP": "10.0.12.2",
     "SSHPort": 22,
     "Credentials": { "Username": "admin", "Password": "cisco" },
     "Interfaces": [
-      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.2.2", "Mask": "255.255.255.252", "Status": "up" },
-      { "Name": "GigabitEthernet0/1", "Description": "LAN_Switch", "IP": "10.2.0.1", "Mask": "255.255.255.0", "Status": "up" }
+      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.12.2", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "LAN_to_S1", "IP": "10.0.20.1", "Mask": "255.255.255.0", "Status": "up" }
     ],
     "Routing": {
       "OSPF": {
@@ -62,11 +65,13 @@
         "ProcessID": 1,
         "RouterID": "2.2.2.2",
         "Networks": [
-          { "Network": "10.0.2.0", "Mask": "255.255.255.252", "Area": 0 },
-          { "Network": "10.2.0.0", "Mask": "255.255.255.0", "Area": 0 }
+          { "Network": "10.0.12.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.0.20.0", "Mask": "255.255.255.0", "Area": 0 }
         ]
       },
-      "StaticRoutes": []
+      "StaticRoutes": [
+        { "Network": "0.0.0.0", "Mask": "0.0.0.0", "NextHop": "10.0.12.1" }
+      ]
     },
     "NAT": {
       "Enabled": false,
@@ -95,12 +100,12 @@
   {
     "Hostname": "R3",
     "DeviceType": "Router",
-    "ManagementIP": "10.0.1.2",
+    "ManagementIP": "10.0.13.2",
     "SSHPort": 22,
     "Credentials": { "Username": "admin", "Password": "cisco" },
     "Interfaces": [
-      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.1.2", "Mask": "255.255.255.252", "Status": "up" },
-      { "Name": "GigabitEthernet0/1", "Description": "LAN_Switch", "IP": "10.3.0.1", "Mask": "255.255.255.0", "Status": "up" }
+      { "Name": "GigabitEthernet0/0", "Description": "Link_to_R1", "IP": "10.0.13.2", "Mask": "255.255.255.252", "Status": "up" },
+      { "Name": "GigabitEthernet0/1", "Description": "LAN_to_S2", "IP": "10.0.30.1", "Mask": "255.255.255.0", "Status": "up" }
     ],
     "Routing": {
       "OSPF": {
@@ -108,11 +113,13 @@
         "ProcessID": 1,
         "RouterID": "3.3.3.3",
         "Networks": [
-          { "Network": "10.0.1.0", "Mask": "255.255.255.252", "Area": 0 },
-          { "Network": "10.3.0.0", "Mask": "255.255.255.0", "Area": 0 }
+          { "Network": "10.0.13.0", "Mask": "255.255.255.252", "Area": 0 },
+          { "Network": "10.0.30.0", "Mask": "255.255.255.0", "Area": 0 }
         ]
       },
-      "StaticRoutes": []
+      "StaticRoutes": [
+        { "Network": "0.0.0.0", "Mask": "0.0.0.0", "NextHop": "10.0.13.1" }
+      ]
     },
     "NAT": {
       "Enabled": false,
@@ -141,7 +148,7 @@
   {
     "Hostname": "S1",
     "DeviceType": "Switch",
-    "ManagementIP": "10.2.0.10",
+    "ManagementIP": "10.0.20.10",
     "SSHPort": 22,
     "Credentials": { "Username": "admin", "Password": "cisco" },
     "VLANs": [
@@ -153,9 +160,9 @@
     ],
     "EtherChannel": { "Enabled": false, "ID": 1, "Mode": "active", "Interfaces": [] },
     "SVIs": [
-      { "VLAN": 1, "IP": "10.2.0.10", "Mask": "255.255.255.0" }
+      { "VLAN": 1, "IP": "10.0.20.10", "Mask": "255.255.255.0" }
     ],
-    "DefaultGateway": "10.2.0.1",
+    "DefaultGateway": "10.0.20.1",
     "ACLs": [],
     "STP": { "Mode": "pvst", "Priority": 32768 },
     "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
@@ -164,7 +171,7 @@
   {
     "Hostname": "S2",
     "DeviceType": "Switch",
-    "ManagementIP": "10.3.0.10",
+    "ManagementIP": "10.0.30.10",
     "SSHPort": 22,
     "Credentials": { "Username": "admin", "Password": "cisco" },
     "VLANs": [
@@ -176,9 +183,9 @@
     ],
     "EtherChannel": { "Enabled": false, "ID": 1, "Mode": "active", "Interfaces": [] },
     "SVIs": [
-      { "VLAN": 1, "IP": "10.3.0.10", "Mask": "255.255.255.0" }
+      { "VLAN": 1, "IP": "10.0.30.10", "Mask": "255.255.255.0" }
     ],
-    "DefaultGateway": "10.3.0.1",
+    "DefaultGateway": "10.0.30.1",
     "ACLs": [],
     "STP": { "Mode": "pvst", "Priority": 32768 },
     "DHCPRelay": { "Enabled": false, "RelayIPs": [] },
@@ -187,21 +194,21 @@
   {
     "Hostname": "PC1",
     "DeviceType": "Host",
-    "ManagementIP": "10.2.0.100",
+    "ManagementIP": "10.0.20.100",
     "Credentials": { "Username": "admin", "Password": "cisco" },
-    "IP": "10.2.0.100",
+    "IP": "10.0.20.100",
     "Mask": "255.255.255.0",
-    "Gateway": "10.2.0.1",
+    "Gateway": "10.0.20.1",
     "DNS": ["8.8.8.8"]
   },
   {
     "Hostname": "PC2",
     "DeviceType": "Host",
-    "ManagementIP": "10.3.0.100",
+    "ManagementIP": "10.0.30.100",
     "Credentials": { "Username": "admin", "Password": "cisco" },
-    "IP": "10.3.0.100",
+    "IP": "10.0.30.100",
     "Mask": "255.255.255.0",
-    "Gateway": "10.3.0.1",
+    "Gateway": "10.0.30.1",
     "DNS": ["8.8.8.8"]
   }
 ]

@@ -1,4 +1,4 @@
-! S1 Base Configuration
+! S1 Minimal Base Configuration - SSH + SVI + Default Gateway
 !
 enable
 configure terminal
@@ -6,51 +6,41 @@ configure terminal
 no ip domain-lookup
 hostname S1
 !
+! Disable L3 routing (use ip default-gateway instead)
+no ip routing
+!
 ! AAA
 username admin privilege 15 secret cisco
 !
-! VLAN Configuration
-vlan 1
- name Default
- exit
+! Domain name for SSH keys
+ip domain-name lab.local
 !
-! Interface Configuration
+! Generate RSA keys for SSH (REQUIRED for SSH)
+crypto key generate rsa modulus 1024
+!
+! Access port to R2 (active in VLAN 1)
 interface GigabitEthernet0/0
- description Uplink_to_R2
  switchport mode access
  switchport access vlan 1
  no shutdown
  exit
 !
-interface GigabitEthernet0/1
- description PC1
- switchport mode access
- switchport access vlan 1
- no shutdown
- exit
-!
-! Management SVI
+! Management SVI (MUST BE UP)
 interface Vlan1
- ip address 10.2.0.10 255.255.255.0
+ ip address 10.0.20.10 255.255.255.0
  no shutdown
  exit
 !
 ! Default Gateway
-ip default-gateway 10.2.0.1
-!
+ip default-gateway 10.0.20.1
+
 ! SSH Configuration
 ip ssh version 2
 line vty 0 4
  login local
  transport input ssh
+ exec-timeout 30 0
  exit
-!
-! Logging
-logging 192.168.122.254
-!
-! STP
-spanning-tree mode pvst
-spanning-tree vlan 1 priority 32768
 !
 end
 write memory

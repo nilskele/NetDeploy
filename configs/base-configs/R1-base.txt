@@ -1,67 +1,49 @@
-! R1 Base Configuration - Safe SSH Access Guaranteed
-! Management IP: 192.168.122.254
-! Username: admin / Password: cisco
+! R1 Minimal Base Configuration
+! IP: 192.168.122.254 | User: admin | Pass: cisco
+! Gi0/0=LAN/Internet, Gi0/1=R2, Gi0/2=R3
 
 enable
 configure terminal
-
-! Hostname
 hostname R1
+no ip domain-lookup
 
-! Enable password
 enable secret cisco
-
-! Local user for SSH access
 username admin privilege 15 secret cisco
 
-! Domain name for SSH keys
+! SSH Setup (RSA KEYS REQUIRED)
 ip domain-name lab.local
-
-! Generate RSA keys for SSH (if not already present)
 crypto key generate rsa modulus 1024
-
-! SSH version 2
 ip ssh version 2
 
-! Interface configurations
+! Interfaces
 interface GigabitEthernet0/0
- description Management_Internet
+ description LAN_Internet
  ip address 192.168.122.254 255.255.255.0
  no shutdown
- exit
+exit
 
 interface GigabitEthernet0/1
- description Link_to_R3
- ip address 10.0.1.1 255.255.255.252
+ description Link_to_R2
+ ip address 10.0.12.1 255.255.255.252
  no shutdown
- exit
+exit
 
 interface GigabitEthernet0/2
- description Link_to_R2
- ip address 10.0.2.1 255.255.255.252
+ description Link_to_R3
+ ip address 10.0.13.1 255.255.255.252
  no shutdown
- exit
+exit
 
-! VTY lines for SSH access - CRITICAL!
+! Static routes to reach all networks
+ip route 10.0.20.0 255.255.255.0 10.0.12.2
+ip route 10.0.30.0 255.255.255.0 10.0.13.2
+
+! VTY lines (SSH access)
 line vty 0 4
  login local
  transport input ssh
  exec-timeout 30 0
- exit
+exit
 
-! Console access
-line con 0
- login local
- exec-timeout 30 0
- exit
-
-! OSPF Configuration
-router ospf 1
- router-id 1.1.1.1
- network 10.0.1.0 0.0.0.3 area 0
- network 10.0.2.0 0.0.0.3 area 0
- exit
-
-! Save configuration
 end
 write memory
