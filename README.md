@@ -580,14 +580,6 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun -Verbose |
     Out-File -FilePath "./preview.json"
 ```
 
-**Schedule automated deployments:**
-```powershell
-# Create scheduled task (Windows)
-$action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-File C:\NetDeploy\deploy-script.ps1"
-$trigger = New-ScheduledTaskTrigger -Daily -At 2am
-Register-ScheduledTask -TaskName "NetDeploy-Nightly" -Action $action -Trigger $trigger
-```
-
 **Git integration for configuration management:**
 ```bash
 # After editing devices.json
