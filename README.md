@@ -702,18 +702,5 @@ pwsh -File deploy.ps1
 
 ---
 
-## License
-
-This project is provided as-is for educational and laboratory use. See LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please open an issue or pull request on GitHub.
-
-## Support
-
-For issues, questions, or feature requests, please open an issue on GitHub:  
-[https://github.com/nilskele/NetDeploy/issues](https://github.com/nilskele/NetDeploy/issues)
-
 
 
