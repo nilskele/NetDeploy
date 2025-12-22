@@ -55,15 +55,6 @@ If bulk paste causes issues:
 copy tftp://192.168.122.73/R1-base.txt running-config
 ```
 
-## What Makes These "Safe"
-
-These configurations include:
-1. **VTY lines** configured for SSH with `login local`
-2. **Local user account** (admin/cisco) with privilege 15
-3. **Enable secret** set to cisco
-4. **SSH keys** generated with `crypto key generate rsa`
-5. **Proper interface configurations** that maintain connectivity
-6. **OSPF** configured correctly without breaking access
 
 ## After Applying
 
@@ -74,21 +65,4 @@ ssh admin@10.0.2.2         # For R2 (via R1)
 ssh admin@10.0.1.2         # For R3 (via R1)
 ```
 
-## The SSH Lockout Issue
 
-**What was happening:**
-Our NetDeploy CommandBuilder was missing VTY line configuration, so after deployment:
-- SSH users/passwords were set
-- But VTY lines weren't configured to use them
-- Result: SSH connections rejected
-
-**Fixed in latest version:**
-The CommandBuilder now includes:
-```
-line vty 0 4
- login local
- transport input ssh
- exec-timeout 30 0
-```
-
-This ensures SSH access is always maintained after deployment.
