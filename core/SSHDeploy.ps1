@@ -56,7 +56,7 @@ function Connect-SSH {
         [Parameter(Mandatory)][string]$Username,
         [Parameter(Mandatory)][string]$Password,
         [int]$Port = 22,
-        [int]$Timeout = 10,
+        [int]$Timeout = 30,
         [int]$Retries = 3
     )
 
