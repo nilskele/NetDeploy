@@ -16,7 +16,7 @@ username admin privilege 15 secret cisco
 ip domain-name lab.local
 !
 ! Generate RSA keys for SSH (REQUIRED for SSH)
-crypto key generate rsa modulus 1024
+crypto key generate rsa modulus 2048
 !
 ! Access port to R2 (active in VLAN 1)
 interface GigabitEthernet0/0
