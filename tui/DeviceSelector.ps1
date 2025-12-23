@@ -43,6 +43,7 @@ function Parse-SelectionString {
     )
 
     $Selection = $Selection.Trim()
+    Write-Host "DEBUG Parse: Input='$Selection', MaxIndex=$MaxIndex" -ForegroundColor Magenta
     if ($Selection -eq '') { return @() }
 
     if ($Selection -match '^(?i:a|all)$') {
@@ -53,6 +54,7 @@ function Parse-SelectionString {
     $indices = @()
     foreach ($p in $parts) {
         $p = $p.Trim()
+        Write-Host "DEBUG Parse: Processing part '$p'" -ForegroundColor Magenta
         if ($p -match '^(\d+)-(\d+)$') {
             $start = [int]$Matches[1]
             $end = [int]$Matches[2]
@@ -60,15 +62,19 @@ function Parse-SelectionString {
             for ($i = $start; $i -le $end; $i++) { $indices += ($i-1) }
         }
         elseif ($p -match '^\d+$') {
-            $indices += ([int]$p - 1)
+            $idx = ([int]$p - 1)
+            Write-Host "DEBUG Parse: Single number $p -> index $idx" -ForegroundColor Magenta
+            $indices += $idx
         }
         else {
             throw "Invalid selection token: $p"
         }
     }
 
+    Write-Host "DEBUG Parse: Before validation, indices=$($indices -join ',')" -ForegroundColor Magenta
     # Validate indices
     $indices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $MaxIndex } | Select-Object -Unique
+    Write-Host "DEBUG Parse: After validation, indices=$($indices -join ',')" -ForegroundColor Magenta
     return $indices
 }
 
