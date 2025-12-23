@@ -64,12 +64,7 @@ function Connect-SSH {
         Write-Log ("Attempt " + $i + ": Connecting to " + $DeviceHost + " via SSH...") -Level INFO
 
         try {
-            # Test if host is reachable
-            if (-not (Test-Connection -ComputerName $DeviceHost -Count 1 -Quiet)) {
-                Write-Log ("Host " + $DeviceHost + " is unreachable. Skipping...") -Level WARN
-                return $null
-            }
-
+            # Connect directly - Test-Connection can give false negatives on Linux
             $session = New-SSHSession -ComputerName $DeviceHost -Credential (
                 New-Object System.Management.Automation.PSCredential(
                     $Username,
