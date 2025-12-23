@@ -43,7 +43,6 @@ function Parse-SelectionString {
     )
 
     $Selection = $Selection.Trim()
-    Write-Host "DEBUG Parse: Input='$Selection', MaxIndex=$MaxIndex" -ForegroundColor Magenta
     if ($Selection -eq '') { return @() }
 
     if ($Selection -match '^(?i:a|all)$') {
@@ -54,7 +53,6 @@ function Parse-SelectionString {
     $indices = @()
     foreach ($p in $parts) {
         $p = $p.Trim()
-        Write-Host "DEBUG Parse: Processing part '$p'" -ForegroundColor Magenta
         if ($p -match '^(\d+)-(\d+)$') {
             $start = [int]$Matches[1]
             $end = [int]$Matches[2]
@@ -62,19 +60,15 @@ function Parse-SelectionString {
             for ($i = $start; $i -le $end; $i++) { $indices += ($i-1) }
         }
         elseif ($p -match '^\d+$') {
-            $idx = ([int]$p - 1)
-            Write-Host "DEBUG Parse: Single number $p -> index $idx" -ForegroundColor Magenta
-            $indices += $idx
+            $indices += ([int]$p - 1)
         }
         else {
             throw "Invalid selection token: $p"
         }
     }
 
-    Write-Host "DEBUG Parse: Before validation, indices=$($indices -join ',')" -ForegroundColor Magenta
-    # Validate indices
-    $indices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $MaxIndex } | Select-Object -Unique
-    Write-Host "DEBUG Parse: After validation, indices=$($indices -join ','), type=$($indices.GetType().Name), count=$($indices.Count)" -ForegroundColor Magenta
+    # Validate indices and force array
+    $indices = @($indices | Where-Object { $_ -ge 0 -and $_ -lt $MaxIndex } | Select-Object -Unique)
     return $indices
 }
 
@@ -144,7 +138,6 @@ function Select-Devices {
             $sel = Read-Host
             try {
                 $indices = Parse-SelectionString -Selection $sel -MaxIndex $Devices.Count
-                Write-Host "DEBUG Select: Received indices=$($indices -join ','), type=$($indices.GetType().Name), count=$($indices.Count)" -ForegroundColor Cyan
                 break
             } catch {
                 Write-Host "Invalid selection. Try again." -ForegroundColor Yellow
@@ -152,22 +145,16 @@ function Select-Devices {
         }
     }
 
-    Write-Host "DEBUG Select: Checking indices - null?=$($null -eq $indices), count=$($indices.Count)" -ForegroundColor Cyan
-    # Force array wrapper
+    # Force array wrapper to handle single index returns
     $indices = @($indices)
-    Write-Host "DEBUG Select: After array wrap - count=$($indices.Count), type=$($indices.GetType().Name)" -ForegroundColor Cyan
     if ($indices.Count -eq 0) { 
-        Write-Host "DEBUG: No indices selected or empty array" -ForegroundColor Red
         return @() 
     }
 
-    Write-Host "DEBUG: Building result from indices: $($indices -join ',')" -ForegroundColor Yellow
     $result = @()
     foreach ($idx in $indices) { 
-        Write-Host "DEBUG: Adding device at index $idx : $($Devices[$idx].Hostname)" -ForegroundColor Yellow
         $result += $Devices[$idx] 
     }
-    Write-Host "DEBUG: Final result count before return: $($result.Count)" -ForegroundColor Yellow
     return ,$result  # Comma forces array return even with single element
 }
 
