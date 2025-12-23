@@ -74,7 +74,7 @@ function Parse-SelectionString {
     Write-Host "DEBUG Parse: Before validation, indices=$($indices -join ',')" -ForegroundColor Magenta
     # Validate indices
     $indices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $MaxIndex } | Select-Object -Unique
-    Write-Host "DEBUG Parse: After validation, indices=$($indices -join ',')" -ForegroundColor Magenta
+    Write-Host "DEBUG Parse: After validation, indices=$($indices -join ','), type=$($indices.GetType().Name), count=$($indices.Count)" -ForegroundColor Magenta
     return $indices
 }
 
@@ -144,6 +144,7 @@ function Select-Devices {
             $sel = Read-Host
             try {
                 $indices = Parse-SelectionString -Selection $sel -MaxIndex $Devices.Count
+                Write-Host "DEBUG Select: Received indices=$($indices -join ','), type=$($indices.GetType().Name), count=$($indices.Count)" -ForegroundColor Cyan
                 break
             } catch {
                 Write-Host "Invalid selection. Try again." -ForegroundColor Yellow
@@ -151,6 +152,7 @@ function Select-Devices {
         }
     }
 
+    Write-Host "DEBUG Select: Checking indices - null?=$($null -eq $indices), count=$($indices.Count)" -ForegroundColor Cyan
     if (-not $indices -or $indices.Count -eq 0) { 
         Write-Host "DEBUG: No indices selected or empty array" -ForegroundColor Red
         return @() 
