@@ -145,10 +145,18 @@ function Select-Devices {
         }
     }
 
-    if (-not $indices -or $indices.Count -eq 0) { return @() }
+    if (-not $indices -or $indices.Count -eq 0) { 
+        Write-Host "DEBUG: No indices selected or empty array" -ForegroundColor Red
+        return @() 
+    }
 
+    Write-Host "DEBUG: Building result from indices: $($indices -join ',')" -ForegroundColor Yellow
     $result = @()
-    foreach ($idx in $indices) { $result += $Devices[$idx] }
+    foreach ($idx in $indices) { 
+        Write-Host "DEBUG: Adding device at index $idx : $($Devices[$idx].Hostname)" -ForegroundColor Yellow
+        $result += $Devices[$idx] 
+    }
+    Write-Host "DEBUG: Final result count before return: $($result.Count)" -ForegroundColor Yellow
     return ,$result  # Comma forces array return even with single element
 }
 
