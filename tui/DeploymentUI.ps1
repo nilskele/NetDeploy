@@ -78,6 +78,8 @@ function Start-NetDeployUI {
         switch ($choice) {
             1 {
                 $selected = Select-Devices -Devices $devices
+                # Force array and check count
+                $selected = @($selected)
                 if ($selected.Count -eq 0) {
                     Pause
                     continue
