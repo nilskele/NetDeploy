@@ -61,10 +61,21 @@ function Connect-SSH {
     )
 
     for ($i = 1; $i -le $Retries; $i++) {
-        Write-Log ("Attempt " + $i + ": Connecting to " + $DeviceHost + " via SSH...") -Level INFO
-
+        Write-Log ("Attempt " + $i + ": Testing IP connectivity to " + $DeviceHost) -Level INFO
         try {
-            # Connect directly - Test-Connection can give false negatives on Linux
+            if (-not (Test-Connection -ComputerName $DeviceHost -Count 1 -Quiet -TimeoutSeconds 2)) {
+                Write-Log "Ping failed: $DeviceHost is unreachable (skipping SSH attempt)" -Level WARN
+                Start-Sleep -Seconds 2
+                continue
+            }
+        } catch {
+            Write-Log "Test-Connection error: $_" -Level WARN
+            Start-Sleep -Seconds 2
+            continue
+        }
+
+        Write-Log ("Attempt " + $i + ": Connecting to " + $DeviceHost + " via SSH...") -Level INFO
+        try {
             $session = New-SSHSession -ComputerName $DeviceHost -Credential (
                 New-Object System.Management.Automation.PSCredential(
                     $Username,
@@ -79,9 +90,7 @@ function Connect-SSH {
                 Write-Log "SSH session creation failed for $DeviceHost" -Level WARN
             }
         } catch {
-           Write-Log ("SSH connection error for " + $DeviceHost + ": " + $_) -Level ERROR
-
-
+            Write-Log ("SSH connection error for " + $DeviceHost + ": " + $_) -Level ERROR
         }
 
         Start-Sleep -Seconds 2

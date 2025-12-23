@@ -146,6 +146,48 @@
     }
   },
   {
+    "Hostname": "R4",
+    "DeviceType": "Router",
+    "ManagementIP": "192.168.122.100",
+    "SSHPort": 22,
+    "Credentials": { "Username": "admin", "Password": "cisco" },
+    "Interfaces": [
+      { "Name": "GigabitEthernet0/0", "Description": "Direct_to_Switch", "IP": "192.168.122.100", "Mask": "255.255.255.0", "Status": "up" }
+    ],
+    "Routing": {
+      "OSPF": {
+        "Enabled": false,
+        "ProcessID": 0,
+        "RouterID": "",
+        "Networks": []
+      },
+      "StaticRoutes": []
+    },
+    "NAT": {
+      "Enabled": false,
+      "InsideInterface": "",
+      "OutsideInterface": "",
+      "PAT": { "Enabled": false },
+      "Static": [],
+      "Pools": []
+    },
+    "DHCP": {
+      "Enabled": false,
+      "Pools": []
+    },
+    "DNS": {
+      "Enabled": false,
+      "DomainName": "lab.local",
+      "DNSServers": [],
+      "Hosts": []
+    },
+    "Services": {
+      "NTP": { "Enabled": false, "Servers": [] },
+      "Syslog": { "Enabled": false, "Host": "" },
+      "AAA": { "Enabled": true, "Users": [ { "Username": "admin", "Privilege": 15, "Password": "cisco" } ] }
+    }
+  },
+  {
     "Hostname": "S1",
     "DeviceType": "Switch",
     "ManagementIP": "10.0.20.10",
