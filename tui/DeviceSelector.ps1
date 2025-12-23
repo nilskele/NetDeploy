@@ -153,7 +153,10 @@ function Select-Devices {
     }
 
     Write-Host "DEBUG Select: Checking indices - null?=$($null -eq $indices), count=$($indices.Count)" -ForegroundColor Cyan
-    if (-not $indices -or $indices.Count -eq 0) { 
+    # Force array wrapper
+    $indices = @($indices)
+    Write-Host "DEBUG Select: After array wrap - count=$($indices.Count), type=$($indices.GetType().Name)" -ForegroundColor Cyan
+    if ($indices.Count -eq 0) { 
         Write-Host "DEBUG: No indices selected or empty array" -ForegroundColor Red
         return @() 
     }
