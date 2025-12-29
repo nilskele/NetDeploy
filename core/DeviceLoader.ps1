@@ -338,8 +338,6 @@ function Load-AllDevicesFromJson {
 
 # -------------------------------------------------------
 # JSON-first device loading API
-# From now on the loader expects a single JSON file (or a path to a folder
-# that contains a devices.json file). PSD1-per-file support has been removed.
 # -------------------------------------------------------
 function Load-AllDevices {
     <#
