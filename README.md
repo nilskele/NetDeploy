@@ -45,10 +45,6 @@ NetDeploy is a PowerShell-based automation framework for deploying configuration
 
 ## 2. Project Structure & Capabilities
 
----
-
-## 2. Project Structure & Capabilities
-
 ### Directory Structure
 
 ```
@@ -186,10 +182,6 @@ NetDeploy/
    - SSH lockout prevention (VTY line auto-config)
    - Dry-run mode for testing
    - Backup-before-deploy workflow
-
----
-
-## 3. How to Use NetDeploy (Complete Walkthrough)
 
 ---
 
@@ -617,24 +609,7 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun -Verbose |
     Out-File -FilePath "./preview.json"
 ```
 
-**Git integration for configuration management:**
-```bash
-# After editing devices.json
-git add configs/devices/devices.json
-git commit -m "Updated R1 OSPF configuration"
-git push origin main
-
-# Deploy from specific git commit
-git checkout abc123
-pwsh -File deploy.ps1
-```
-
 ---
-
-## 4. Sources & References
-
----
-
 ## 4. Sources & References
 
 ### PowerShell & SSH
@@ -700,6 +675,11 @@ pwsh -File deploy.ps1
 - **Cisco IOS Automation Examples**  
   [https://github.com/search?q=cisco+ios+automation](https://github.com/search?q=cisco+ios+automation)
 
+### AI Chats
+
+- 
+
+- 
 ---
 
 
