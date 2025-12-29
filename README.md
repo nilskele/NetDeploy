@@ -677,9 +677,14 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun -Verbose |
 
 ### AI Chats
 
-- 
+- https://chatgpt.com/share/69529a83-f8b8-800a-ab6e-6d1378294100
+- https://chatgpt.com/share/69529ba8-843c-800a-9f34-44294c856d52
+- https://chatgpt.com/share/6952a365-9878-800a-86b7-5680f996de62
+- https://chatgpt.com/share/6952a39e-ea04-800a-98d6-3e81ca7a8f26
+- https://chatgpt.com/share/6952a816-5128-800a-880f-27c8f5fc70f9
 
-- 
+##### a lot of copilot was used for debugging and for refining functions like the logging, commandbuildin, parallel throttle, ssh deployement etc...
+- AI used: GPT-4.1, claude opus 4.5, Claud sonnet 4.5, GPT-5 and GPT-4
 ---
 
 
