@@ -45,10 +45,6 @@ NetDeploy is a PowerShell-based automation framework for deploying configuration
 
 ## 2. Project Structure & Capabilities
 
----
-
-## 2. Project Structure & Capabilities
-
 ### Directory Structure
 
 ```
@@ -186,10 +182,6 @@ NetDeploy/
    - SSH lockout prevention (VTY line auto-config)
    - Dry-run mode for testing
    - Backup-before-deploy workflow
-
----
-
-## 3. How to Use NetDeploy (Complete Walkthrough)
 
 ---
 
@@ -617,24 +609,7 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun -Verbose |
     Out-File -FilePath "./preview.json"
 ```
 
-**Git integration for configuration management:**
-```bash
-# After editing devices.json
-git add configs/devices/devices.json
-git commit -m "Updated R1 OSPF configuration"
-git push origin main
-
-# Deploy from specific git commit
-git checkout abc123
-pwsh -File deploy.ps1
-```
-
 ---
-
-## 4. Sources & References
-
----
-
 ## 4. Sources & References
 
 ### PowerShell & SSH
@@ -700,6 +675,16 @@ pwsh -File deploy.ps1
 - **Cisco IOS Automation Examples**  
   [https://github.com/search?q=cisco+ios+automation](https://github.com/search?q=cisco+ios+automation)
 
+### AI Chats
+
+- https://chatgpt.com/share/69529a83-f8b8-800a-ab6e-6d1378294100
+- https://chatgpt.com/share/69529ba8-843c-800a-9f34-44294c856d52
+- https://chatgpt.com/share/6952a365-9878-800a-86b7-5680f996de62
+- https://chatgpt.com/share/6952a39e-ea04-800a-98d6-3e81ca7a8f26
+- https://chatgpt.com/share/6952a816-5128-800a-880f-27c8f5fc70f9
+- https://chatgpt.com/share/6952e3bc-3e44-800a-8a40-d8963f86d7dc
+##### a lot of copilot was used for debugging and for refining functions like the logging, commandbuildin, parallel throttle, ssh deployement etc...
+- AI used: GPT-4.1, claude opus 4.5, Claud sonnet 4.5, GPT-5 and GPT-4
 ---
 
 
