@@ -92,28 +92,31 @@ function Connect-SSH {
         } catch {
             $errMsg = $_.Exception.Message
             Write-Log ("SSH connection error for " + $DeviceHost + ": " + $errMsg) -Level ERROR
-            if ($errMsg -match "key exchange|host key|no matching") {
-                Write-Log "Falling back to native ssh with legacy KEX/hostkey options..." -Level WARN
-                $sshCmd = @(
-                    "ssh",
-                    "-oKexAlgorithms=+diffie-hellman-group14-sha1",
-                    "-oHostKeyAlgorithms=+ssh-rsa",
-                    "-oStrictHostKeyChecking=no",
-                    "-p", $Port,
-                    "$Username@$DeviceHost",
-                    "echo 'SSH Fallback Success'"
-                )
-                $result = & $sshCmd 2>&1
-                if ($LASTEXITCODE -eq 0 -and $result -match "SSH Fallback Success") {
-                    Write-Log "Native ssh fallback succeeded for $DeviceHost" -Level INFO
-                    return @{ NativeSSH = $true; Host = $DeviceHost; User = $Username }
-                } else {
-                    Write-Log "Native ssh fallback failed: $result" -Level ERROR
-                }
-            }
         }
 
         Start-Sleep -Seconds 2
+    }
+
+    # All Posh-SSH attempts failed - try native ssh with legacy options as last resort
+    Write-Log "Posh-SSH failed. Trying native ssh with legacy KEX/hostkey options..." -Level WARN
+    try {
+        # Use sshpass for password auth with native ssh (must be installed: apt install sshpass)
+        $sshpassAvailable = Get-Command sshpass -ErrorAction SilentlyContinue
+        if ($sshpassAvailable) {
+            $sshArgs = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port $Username@$DeviceHost echo 'SSH_FALLBACK_OK'"
+            $result = & sshpass -p $Password ssh $sshArgs.Split(' ') 2>&1
+            if ($LASTEXITCODE -eq 0 -and ($result -join ' ') -match "SSH_FALLBACK_OK") {
+                Write-Log "Native ssh fallback succeeded for $DeviceHost" -Level INFO
+                return @{ NativeSSH = $true; Host = $DeviceHost; User = $Username; Password = $Password; Port = $Port }
+            } else {
+                Write-Log "Native ssh fallback failed: $result" -Level ERROR
+            }
+        } else {
+            Write-Log "sshpass not installed. Install with: sudo apt install sshpass" -Level ERROR
+            Write-Log "Without sshpass, native ssh fallback cannot automate password authentication." -Level ERROR
+        }
+    } catch {
+        Write-Log "Native ssh fallback error: $_" -Level ERROR
     }
 
     Write-Log "All SSH connection attempts failed for $DeviceHost" -Level ERROR
