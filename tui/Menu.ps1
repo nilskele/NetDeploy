@@ -226,32 +226,41 @@ function Show-BackupContents {
         Write-Host "\n--- Viewing: $file ---\n" -ForegroundColor Green
 
         try {
-            # Use Get-Content to stream
-            $lines = Get-Content -Path $file -ErrorAction Stop
-            $lineCount = $lines.Count
-
-            if ($lineCount -eq 0) {
-                Write-Host "Backup file is empty." -ForegroundColor Yellow
-            } elseif ($lineCount -le 100) {
-                # Small file - show all
-                $lines | ForEach-Object { Write-Host $_ }
+            # Read entire file content
+            $content = Get-Content -Path $file -Raw -ErrorAction Stop
+            
+            if ([string]::IsNullOrWhiteSpace($content)) {
+                Write-Host "Backup file is empty or contains only whitespace." -ForegroundColor Yellow
             } else {
-                # Large file - use More pagination or head/tail
-                Write-Host "File has $lineCount lines. Displaying with pagination..." -ForegroundColor Yellow
-                Write-Host "Press 'q' to stop viewing, 'Enter' to continue..." -ForegroundColor DarkGray
+                # Split into lines for display
+                $lines = $content -split "`r?`n"
+                $lineCount = $lines.Count
+
+                Write-Host "File contains $lineCount lines. Displaying configuration..." -ForegroundColor Yellow
+                Write-Host ("=" * 80) -ForegroundColor DarkGray
                 Write-Host
                 
+                # Display each line with a slight delay for readability (like SSH command output)
                 $pageSize = 50
-                for ($i = 0; $i -lt $lineCount; $i += $pageSize) {
-                    $end = [Math]::Min($i + $pageSize - 1, $lineCount - 1)
-                    $lines[$i..$end] | ForEach-Object { Write-Host $_ }
+                $lineNumber = 1
+                
+                foreach ($line in $lines) {
+                    # Display line
+                    Write-Host $line
                     
-                    if ($end -lt ($lineCount - 1)) {
-                        Write-Host "`n--- Line $($i + 1) to $($end + 1) of $lineCount (press Enter for more, 'q' to quit) ---" -ForegroundColor DarkGray
+                    # Pagination: pause every pageSize lines
+                    if ($lineNumber % $pageSize -eq 0 -and $lineNumber -lt $lineCount) {
+                        Write-Host "`n--- Line $lineNumber of $lineCount (press Enter for more, 'q' to quit) ---" -ForegroundColor DarkGray
                         $key = [System.Console]::ReadLine()
                         if ($key -eq 'q') { break }
+                        Write-Host
                     }
+                    
+                    $lineNumber++
                 }
+                
+                Write-Host
+                Write-Host ("=" * 80) -ForegroundColor DarkGray
             }
 
         } catch {
