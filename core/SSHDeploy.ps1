@@ -95,23 +95,47 @@ function Get-NativeSSHConfig {
         [int]$Port = 22
     )
     
-    $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port -tt"
+    $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port"
     
-    $cmdString = @"
-terminal length 0
-show running-config
-exit
-"@
-    
-    $fullCmd = @"
-sshpass -p '$Password' ssh $sshOpts $User@$Host << 'EOF'
-$cmdString
-EOF
+    # Create a temporary expect-like script for proper interaction
+    $script = @"
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh $sshOpts $User@$Host
+expect "Password:"
+send "$Password\r"
+expect {
+    "#" { }
+    ">" { }
+}
+send "terminal length 0\r"
+expect {
+    "#" { }
+    ">" { }
+}
+send "show running-config\r"
+expect {
+    "#" { }
+    ">" { }
+}
+send "exit\r"
+expect eof
 "@
     
     try {
+        Write-Log "Fetching config from $Host using native SSH..." -Level DEBUG
+        
+        # Use sshpass with piped commands
+        $fullCmd = "echo -e 'terminal length 0\nshow running-config\nexit' | sshpass -p '$Password' ssh $sshOpts $User@$Host 2>&1"
+        
         $result = bash -c $fullCmd 2>&1
+        
+        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 255) {
+            Write-Log "Native SSH command failed with exit code $LASTEXITCODE" -Level ERROR
+        }
+        
         $text = $result -join "`n"
+        Write-Log "Received $($text.Length) bytes from device" -Level DEBUG
         
         # Clean up the output (remove command echo and prompts)
         $lines = $text -split "`r?`n"
@@ -119,10 +143,12 @@ EOF
         $inConfig = $false
         
         foreach ($line in $lines) {
-            if ($line -match "^Building configuration") { 
+            # Start capturing from "Building configuration" or "Current configuration"
+            if ($line -match "^(Building configuration|Current configuration)") { 
                 $inConfig = $true 
             }
-            if ($inConfig -and $line -match "^[A-Za-z0-9_-]+#\s*$") {
+            # Stop at the end prompt (router# or switch#) but only if we've captured content
+            if ($inConfig -and $configLines.Count -gt 2 -and $line -match "^[A-Za-z0-9_-]+[>#]\s*$") {
                 break
             }
             if ($inConfig) { 
@@ -130,8 +156,17 @@ EOF
             }
         }
         
-        return @{ Success = $true; Config = ($configLines -join "`n").Trim() }
+        $config = ($configLines -join "`n").Trim()
+        Write-Log "Extracted config: $($config.Length) bytes, $($configLines.Count) lines" -Level DEBUG
+        
+        if ($configLines.Count -le 2) {
+            Write-Log "WARNING: Config appears incomplete (only $($configLines.Count) lines captured)" -Level WARN
+            Write-Log "Raw output preview: $($text.Substring(0, [Math]::Min(500, $text.Length)))" -Level DEBUG
+        }
+        
+        return @{ Success = $true; Config = $config }
     } catch {
+        Write-Log "Exception during native SSH config fetch: $_" -Level ERROR
         return @{ Success = $false; Config = ""; Error = $_.Exception.Message }
     }
 }
@@ -363,24 +398,53 @@ function Backup-DeviceConfig {
         
         # Send show running-config command
         $stream.WriteLine("show running-config")
-        Start-Sleep -Seconds 5
         
-        # Read all available output
-        $text = $stream.Read()
+        # Wait for initial response
+        Start-Sleep -Seconds 2
+        
+        # Read all available output in a loop until no more data
+        $allText = ""
+        $attempts = 0
+        $maxAttempts = 30  # 30 seconds max
+        
+        do {
+            $chunk = $stream.Read()
+            if ($chunk) {
+                $allText += $chunk
+                Write-Log "Read chunk: $($chunk.Length) chars (total: $($allText.Length))" -Level DEBUG
+            }
+            
+            # Check if we've received the ending prompt
+            if ($allText -match "[A-Za-z0-9_-]+[>#]\s*$") {
+                Write-Log "Detected end prompt, stopping read" -Level DEBUG
+                break
+            }
+            
+            # If no data in this chunk, wait a bit and try again
+            if (-not $chunk -or $chunk.Length -eq 0) {
+                Start-Sleep -Milliseconds 500
+                $attempts++
+            } else {
+                $attempts = 0  # Reset counter if we got data
+            }
+            
+        } while ($attempts -lt 5)  # Stop if no data for 2.5 seconds
+        
+        Write-Log "Total config data received: $($allText.Length) chars" -Level INFO
         
         # Clean up the output (remove command echo and prompts)
-        $lines = $text -split "`r?`n"
+        $lines = $allText -split "`r?`n"
         $configLines = @()
         $inConfig = $false
         
         foreach ($line in $lines) {
-            # Start capturing from "Building configuration"
-            if ($line -match "^Building configuration") { 
+            # Start capturing from "Building configuration" or "Current configuration"
+            if ($line -match "^(Building configuration|Current configuration)") { 
                 $inConfig = $true 
             }
             
             # Stop at the end prompt (router# or switch#)
-            if ($inConfig -and $line -match "^[A-Za-z0-9_-]+#\s*$") {
+            if ($inConfig -and $line -match "^[A-Za-z0-9_-]+[>#]\s*$") {
                 break
             }
             
@@ -390,6 +454,11 @@ function Backup-DeviceConfig {
         }
         
         $cleanText = ($configLines -join "`n").Trim()
+        Write-Log "Extracted config: $($configLines.Count) lines" -Level INFO
+        
+        if ($configLines.Count -le 2) {
+            Write-Log "WARNING: Config appears incomplete (only $($configLines.Count) lines)" -Level WARN
+        }
         
         $cleanText | Out-File -FilePath $file -Encoding UTF8
 
