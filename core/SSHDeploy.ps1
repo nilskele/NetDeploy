@@ -204,6 +204,26 @@ function Backup-DeviceConfig {
         return $null
     }
 
+    # Check if this is a native SSH session (fallback mode)
+    if ($session.NativeSSH -eq $true) {
+        Write-Log "Using native SSH for backup of $($Device.Hostname)" -Level INFO
+        try {
+            $result = Get-NativeSSHConfig -Host $session.Host -User $session.User -Password $session.Password -Port $session.Port
+            if ($result.Success -and $result.Config) {
+                $result.Config | Out-File -FilePath $file -Encoding UTF8
+                Write-Log "Backup saved (native SSH): $file" -Level INFO
+                return $file
+            } else {
+                Write-Log "Native SSH backup failed for $($Device.Hostname): $($result.Error)" -Level ERROR
+                return $null
+            }
+        } catch {
+            Write-Log "Error during native SSH backup for $($Device.Hostname): $_" -Level ERROR
+            return $null
+        }
+    }
+
+    # Posh-SSH session - use shell stream
     try {
         # Use SSH Stream for Cisco devices (more reliable than exec channel)
         $stream = New-SSHShellStream -SessionId $session.SessionId
@@ -255,7 +275,7 @@ function Backup-DeviceConfig {
         Write-Log "Error during backup for $($Device.Hostname): $_" -Level ERROR
         return $null
     } finally {
-        if ($session) { Remove-SSHSession -SessionId $session.SessionId }
+        if ($session -and $session.SessionId) { Remove-SSHSession -SessionId $session.SessionId }
     }
 }
 
@@ -410,6 +430,24 @@ function Deploy-Device {
         return
     }
 
+    # Check if this is a native SSH session (fallback mode)
+    if ($session.NativeSSH -eq $true) {
+        Write-Log "Using native SSH for deployment to $($Device.Hostname)" -Level INFO
+        try {
+            $result = Invoke-NativeSSHCommands -Host $session.Host -User $session.User -Password $session.Password -Port $session.Port -Commands $cmds -DelayPerCommand $CommandDelay
+            if ($result.Success) {
+                Write-Log "Deployment completed (native SSH) for $($Device.Hostname)" -Level INFO
+                Write-Log "[$($Device.Hostname)] Output: $($result.Output)" -Level DEBUG
+            } else {
+                Write-Log "Native SSH deployment failed for $($Device.Hostname): $($result.Output)" -Level ERROR
+            }
+        } catch {
+            Write-Log "Error during native SSH deployment for $($Device.Hostname): $_" -Level ERROR
+        }
+        return
+    }
+
+    # Posh-SSH session - use shell stream
     $stream = $null
     try {
         # Wait for session to stabilize
@@ -461,7 +499,7 @@ function Deploy-Device {
         if ($stream) {
             $stream.Dispose()
         }
-        if ($session) {
+        if ($session -and $session.SessionId) {
             Remove-SSHSession -SessionId $session.SessionId
             Write-Log "SSH session closed for $($Device.Hostname)" -Level DEBUG
         }
