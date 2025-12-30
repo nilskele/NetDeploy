@@ -90,7 +90,27 @@ function Connect-SSH {
                 Write-Log "SSH session creation failed for $DeviceHost" -Level WARN
             }
         } catch {
-            Write-Log ("SSH connection error for " + $DeviceHost + ": " + $_) -Level ERROR
+            $errMsg = $_.Exception.Message
+            Write-Log ("SSH connection error for " + $DeviceHost + ": " + $errMsg) -Level ERROR
+            if ($errMsg -match "key exchange|host key|no matching") {
+                Write-Log "Falling back to native ssh with legacy KEX/hostkey options..." -Level WARN
+                $sshCmd = @(
+                    "ssh",
+                    "-oKexAlgorithms=+diffie-hellman-group14-sha1",
+                    "-oHostKeyAlgorithms=+ssh-rsa",
+                    "-oStrictHostKeyChecking=no",
+                    "-p", $Port,
+                    "$Username@$DeviceHost",
+                    "echo 'SSH Fallback Success'"
+                )
+                $result = & $sshCmd 2>&1
+                if ($LASTEXITCODE -eq 0 -and $result -match "SSH Fallback Success") {
+                    Write-Log "Native ssh fallback succeeded for $DeviceHost" -Level INFO
+                    return @{ NativeSSH = $true; Host = $DeviceHost; User = $Username }
+                } else {
+                    Write-Log "Native ssh fallback failed: $result" -Level ERROR
+                }
+            }
         }
 
         Start-Sleep -Seconds 2
