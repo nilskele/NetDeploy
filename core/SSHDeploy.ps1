@@ -13,6 +13,130 @@
 . "$PSScriptRoot/CommandBuilder.ps1"
 
 # -------------------------
+# Native SSH helper functions (for legacy devices with old KEX/hostkey)
+# -------------------------
+
+function Invoke-NativeSSHCommand {
+    <#
+    .SYNOPSIS
+        Executes a command on a device using native ssh with sshpass for password auth.
+    .DESCRIPTION
+        Uses sshpass + ssh with legacy KEX/hostkey options for devices that don't work with Posh-SSH.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$User,
+        [Parameter(Mandatory)][string]$Password,
+        [int]$Port = 22,
+        [Parameter(Mandatory)][string]$Command
+    )
+    
+    $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port"
+    $fullCmd = "sshpass -p '$Password' ssh $sshOpts $User@$Host `"$Command`""
+    
+    try {
+        $result = bash -c $fullCmd 2>&1
+        return @{ Success = ($LASTEXITCODE -eq 0); Output = $result; ExitCode = $LASTEXITCODE }
+    } catch {
+        return @{ Success = $false; Output = $_.Exception.Message; ExitCode = 1 }
+    }
+}
+
+function Invoke-NativeSSHCommands {
+    <#
+    .SYNOPSIS
+        Executes multiple commands on a device using native ssh with an interactive shell.
+    .DESCRIPTION
+        Uses sshpass + ssh with legacy KEX/hostkey options and sends commands via stdin.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$User,
+        [Parameter(Mandatory)][string]$Password,
+        [int]$Port = 22,
+        [Parameter(Mandatory)][string[]]$Commands,
+        [int]$DelayPerCommand = 1
+    )
+    
+    # Build command string
+    $cmdString = "terminal length 0`n"
+    foreach ($cmd in $Commands) {
+        $cmdString += "$cmd`n"
+    }
+    $cmdString += "exit`n"
+    
+    $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port -tt"
+    
+    # Use heredoc to send commands
+    $fullCmd = @"
+sshpass -p '$Password' ssh $sshOpts $User@$Host << 'EOF'
+$cmdString
+EOF
+"@
+    
+    try {
+        Write-Log "Executing native SSH commands on $Host" -Level DEBUG
+        $result = bash -c $fullCmd 2>&1
+        return @{ Success = ($LASTEXITCODE -eq 0); Output = ($result -join "`n"); ExitCode = $LASTEXITCODE }
+    } catch {
+        return @{ Success = $false; Output = $_.Exception.Message; ExitCode = 1 }
+    }
+}
+
+function Get-NativeSSHConfig {
+    <#
+    .SYNOPSIS
+        Retrieves running-config from a device using native ssh.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$User,
+        [Parameter(Mandatory)][string]$Password,
+        [int]$Port = 22
+    )
+    
+    $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port -tt"
+    
+    $cmdString = @"
+terminal length 0
+show running-config
+exit
+"@
+    
+    $fullCmd = @"
+sshpass -p '$Password' ssh $sshOpts $User@$Host << 'EOF'
+$cmdString
+EOF
+"@
+    
+    try {
+        $result = bash -c $fullCmd 2>&1
+        $text = $result -join "`n"
+        
+        # Clean up the output (remove command echo and prompts)
+        $lines = $text -split "`r?`n"
+        $configLines = @()
+        $inConfig = $false
+        
+        foreach ($line in $lines) {
+            if ($line -match "^Building configuration") { 
+                $inConfig = $true 
+            }
+            if ($inConfig -and $line -match "^[A-Za-z0-9_-]+#\s*$") {
+                break
+            }
+            if ($inConfig) { 
+                $configLines += $line 
+            }
+        }
+        
+        return @{ Success = $true; Config = ($configLines -join "`n").Trim() }
+    } catch {
+        return @{ Success = $false; Config = ""; Error = $_.Exception.Message }
+    }
+}
+
+# -------------------------
 # Connect via SSH with safety check
 # -------------------------
 function Connect-SSH {
