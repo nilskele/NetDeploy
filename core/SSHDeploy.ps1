@@ -103,13 +103,26 @@ function Connect-SSH {
         # Use sshpass for password auth with native ssh (must be installed: apt install sshpass)
         $sshpassAvailable = Get-Command sshpass -ErrorAction SilentlyContinue
         if ($sshpassAvailable) {
-            $sshArgs = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port $Username@$DeviceHost echo 'SSH_FALLBACK_OK'"
-            $result = & sshpass -p $Password ssh $sshArgs.Split(' ') 2>&1
-            if ($LASTEXITCODE -eq 0 -and ($result -join ' ') -match "SSH_FALLBACK_OK") {
+            # Build the SSH command with legacy options
+            $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port"
+            $testCmd = "sshpass -p '$Password' ssh $sshOpts $Username@$DeviceHost 'show version' 2>&1 | head -5"
+            
+            Write-Log "Testing native SSH connection to $DeviceHost..." -Level DEBUG
+            $result = bash -c $testCmd 2>&1
+            $resultText = $result -join "`n"
+            
+            # Check if we got a valid Cisco response (contains "Cisco" or "IOS" or version info)
+            if ($LASTEXITCODE -eq 0 -or $resultText -match "Cisco|IOS|Version|ROM|uptime") {
                 Write-Log "Native ssh fallback succeeded for $DeviceHost" -Level INFO
-                return @{ NativeSSH = $true; Host = $DeviceHost; User = $Username; Password = $Password; Port = $Port }
+                return @{ 
+                    NativeSSH = $true
+                    Host = $DeviceHost
+                    User = $Username
+                    Password = $Password
+                    Port = $Port
+                }
             } else {
-                Write-Log "Native ssh fallback failed: $result" -Level ERROR
+                Write-Log "Native ssh fallback failed for $DeviceHost. Output: $resultText" -Level ERROR
             }
         } else {
             Write-Log "sshpass not installed. Install with: sudo apt install sshpass" -Level ERROR
