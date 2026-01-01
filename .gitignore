@@ -1,5 +1,8 @@
 # NetDeploy - ignore private logs and session-specific data
 
+# Build folder (single-file version for submission)
+build/
+
 # Logs directory (contains main logs, job logs, and backups)
 logs/
 
