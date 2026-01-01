@@ -588,21 +588,6 @@ Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-O
 
 ---
 
-## 🔑 Key Technical Decisions
-
-**Waarom PowerShell?**
-- Cross-platform
-- Native module support
-- Sterke SSH libraries
-- JSON/YAML support
-
-**Waarom Native SSH Fallback?**
-- Posh-SSH blokkeert legacy KEX
-- Cisco IOSv gebruikt oude crypto
-- Native SSH met legacy options als fallback
-
----
-
 ## 📚 Gebruikte Bronnen
 
 ### Officiële Documentatie
@@ -617,6 +602,10 @@ Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-O
 - Jeff Hicks: https://jdhitsolutions.com
 - PowerShell.org: https://powershell.org
 - Network to Code: https://networktocode.com
+- https://app.pluralsight.com/paths/skill/windows-powershell-essentials
+- https://app.pluralsight.com/library/courses/automation-powershell-scripts
+- https://app.pluralsight.com/library/courses/windows-powershell-extending/table-of-contents
+- https://app.pluralsight.com/paths/skill/powershell-hands-on-practice-and-use-cases
 
 ### Video Resources
 
