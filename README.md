@@ -437,7 +437,7 @@ NetDeploy/                              # Root directory
 
 ---
 
-## 🧪 Testing Instructies voor Leerkracht
+## 🧪 Testing Instructies
 
 ### Module Importeren en Verificatie
 
