@@ -643,9 +643,6 @@ Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-O
 #### copilot was used for debugging and refining functions like the logging, commandbuilidng, parallel dpeloyement and backup and backup vieuwing function. 
 - Copilot Used: GPT-4.1, Claude Opus 4.5, Claud Sonnet 4.5, GPT-5, GPT-4
 
-## 📝 Licentie
-
-MIT License - Academisch project voor Erasmushogeschool Brussel
 
 ## 👤 Auteur
 

@@ -35,7 +35,7 @@ function Load-Devices {
             # Single JSON file
             if ($Path -match '\.json$') {
                 Write-Verbose "Loading devices from JSON: $Path"
-                return Load-AllDevicesFromJson -JsonFile $Path
+                return Load-AllDevicesFromJson -File $Path
             } else {
                 throw "Unsupported file format. Expected .json file."
             }
@@ -45,7 +45,7 @@ function Load-Devices {
             $jsonPath = Join-Path $Path "devices.json"
             if (Test-Path $jsonPath) {
                 Write-Verbose "Loading devices from JSON: $jsonPath"
-                return Load-AllDevicesFromJson -JsonFile $jsonPath
+                return Load-AllDevicesFromJson -File $jsonPath
             } else {
                 # Fall back to PSD1 files
                 Write-Verbose "Loading devices from directory: $Path"

@@ -42,6 +42,7 @@ function Invoke-AllDeviceDeployment {
         [int]$CommandDelay = 0,
         [switch]$DryRun,
         [switch]$Parallel,
+        [int]$Throttle = 10,
         [string]$RunName
     )
 
@@ -51,11 +52,11 @@ function Invoke-AllDeviceDeployment {
 
         # Validate all devices first
         Write-Log "Validating all device configurations..." -Level INFO
-        Validate-AllDevices -Devices $Devices
+        Validate-AllDevices -DeviceList $Devices
 
         if ($Parallel) {
             Write-Log "Starting parallel deployment..." -Level INFO
-            $result = Deploy-AllDevices -Devices $Devices -CommandDelay $CommandDelay -DryRun:$DryRun -Parallel
+            $result = Deploy-AllDevices -Devices $Devices -CommandDelay $CommandDelay -DryRun:$DryRun -Parallel -Throttle $Throttle
         } else {
             Write-Log "Starting sequential deployment..." -Level INFO
             $result = Deploy-AllDevices -Devices $Devices -CommandDelay $CommandDelay -DryRun:$DryRun

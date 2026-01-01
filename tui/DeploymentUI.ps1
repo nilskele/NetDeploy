@@ -3,16 +3,18 @@
     NetDeploy Text User Interface.
 #>
 
-# Import NetDeploy module
-try {
-    Import-Module NetDeploy -ErrorAction Stop -Force
-} catch {
-    $manifest = Join-Path $PSScriptRoot '..\NetDeploy.psd1'
-    if (Test-Path $manifest) {
-        Import-Module (Resolve-Path $manifest).Path -Force -ErrorAction Stop
-    } else {
-        Write-Host "Could not find NetDeploy module" -ForegroundColor Red
-        exit 1
+# Import NetDeploy module if not already loaded (when run standalone)
+if (-not (Get-Command -Name 'Load-Devices' -ErrorAction SilentlyContinue)) {
+    try {
+        Import-Module NetDeploy -ErrorAction Stop -Force
+    } catch {
+        $manifest = Join-Path $PSScriptRoot '..\NetDeploy.psd1'
+        if (Test-Path $manifest) {
+            Import-Module (Resolve-Path $manifest).Path -Force -ErrorAction Stop
+        } else {
+            Write-Host "Could not find NetDeploy module" -ForegroundColor Red
+            exit 1
+        }
     }
 }
 
@@ -20,7 +22,7 @@ try {
 . "$PSScriptRoot/DeviceSelector.ps1"
 
 
-function Start-NetDeployUI {
+function Invoke-TUIMain {
     <#
     .SYNOPSIS
         Launches the NetDeploy text user interface.
@@ -180,5 +182,5 @@ function Start-NetDeployUI {
 
 # Auto-start if run directly
 if ($MyInvocation.InvocationName -ne '.') {
-    Start-NetDeployUI
+    Invoke-TUIMain
 }

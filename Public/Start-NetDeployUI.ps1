@@ -51,6 +51,6 @@ function Start-NetDeployUI {
     . $selectorPath
     . $uiPath
 
-    # Launch UI
-    Start-NetDeployUI -DevicePath $DevicePath
+    # Launch UI (call the internal TUI function)
+    Invoke-TUIMain -DevicePath $DevicePath
 }

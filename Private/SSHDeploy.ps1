@@ -24,7 +24,7 @@ function Invoke-NativeSSHCommand {
         Uses sshpass + ssh with legacy KEX/hostkey options for devices that don't work with Posh-SSH.
     #>
     param(
-        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$TargetHost,
         [Parameter(Mandatory)][string]$User,
         [Parameter(Mandatory)][string]$Password,
         [int]$Port = 22,
@@ -32,7 +32,7 @@ function Invoke-NativeSSHCommand {
     )
     
     $sshOpts = "-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa -oPubkeyAuthentication=no -oStrictHostKeyChecking=no -p $Port"
-    $fullCmd = "sshpass -p '$Password' ssh $sshOpts $User@$Host `"$Command`""
+    $fullCmd = "sshpass -p '$Password' ssh $sshOpts $User@$TargetHost `"$Command`""
     
     try {
         $result = bash -c $fullCmd 2>&1
@@ -50,7 +50,7 @@ function Invoke-NativeSSHCommands {
         Uses sshpass + ssh with legacy KEX/hostkey options and sends commands via stdin.
     #>
     param(
-        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$TargetHost,
         [Parameter(Mandatory)][string]$User,
         [Parameter(Mandatory)][string]$Password,
         [int]$Port = 22,
@@ -69,13 +69,13 @@ function Invoke-NativeSSHCommands {
     
     # Use heredoc to send commands
     $fullCmd = @"
-sshpass -p '$Password' ssh $sshOpts $User@$Host << 'EOF'
+sshpass -p '$Password' ssh $sshOpts $User@$TargetHost << 'EOF'
 $cmdString
 EOF
 "@
     
     try {
-        Write-Log "Executing native SSH commands on $Host" -Level DEBUG
+        Write-Log "Executing native SSH commands on $TargetHost" -Level DEBUG
         $result = bash -c $fullCmd 2>&1
         return @{ Success = ($LASTEXITCODE -eq 0); Output = ($result -join "`n"); ExitCode = $LASTEXITCODE }
     } catch {
@@ -89,7 +89,7 @@ function Get-NativeSSHConfig {
         Retrieves running-config from a device using native ssh.
     #>
     param(
-        [Parameter(Mandatory)][string]$Host,
+        [Parameter(Mandatory)][string]$TargetHost,
         [Parameter(Mandatory)][string]$User,
         [Parameter(Mandatory)][string]$Password,
         [int]$Port = 22
@@ -101,7 +101,7 @@ function Get-NativeSSHConfig {
     $script = @"
 #!/usr/bin/expect -f
 set timeout 30
-spawn ssh $sshOpts $User@$Host
+spawn ssh $sshOpts $User@$TargetHost
 expect "Password:"
 send "$Password\r"
 expect {
@@ -123,10 +123,10 @@ expect eof
 "@
     
     try {
-        Write-Log "Fetching config from $Host using native SSH..." -Level DEBUG
+        Write-Log "Fetching config from $TargetHost using native SSH..." -Level DEBUG
         
         # Use sshpass with piped commands
-        $fullCmd = "echo -e 'terminal length 0\nshow running-config\nexit' | sshpass -p '$Password' ssh $sshOpts $User@$Host 2>&1"
+        $fullCmd = "echo -e 'terminal length 0\nshow running-config\nexit' | sshpass -p '$Password' ssh $sshOpts $User@$TargetHost 2>&1"
         
         $result = bash -c $fullCmd 2>&1
         
@@ -340,7 +340,7 @@ function Backup-DeviceConfig {
 
     Write-Log "Backing up running-config for $($Device.Hostname)" -Level INFO
 
-    # Determine repository/module root (parent of core/)
+    # Determine repository/module root (parent of Private/)
     $moduleRoot = Split-Path $PSScriptRoot -Parent
     $bakDir = Join-Path $moduleRoot 'logs'
     $bakDir = Join-Path $bakDir 'backups'
@@ -367,7 +367,7 @@ function Backup-DeviceConfig {
     if ($session.NativeSSH -eq $true) {
         Write-Log "Using native SSH for backup of $($Device.Hostname)" -Level INFO
         try {
-            $result = Get-NativeSSHConfig -Host $session.Host -User $session.User -Password $session.Password -Port $session.Port
+            $result = Get-NativeSSHConfig -TargetHost $session.Host -User $session.User -Password $session.Password -Port $session.Port
             if ($result.Success -and $result.Config) {
                 $result.Config | Out-File -FilePath $file -Encoding UTF8
                 Write-Log "Backup saved (native SSH): $file" -Level INFO
@@ -627,7 +627,7 @@ function Deploy-Device {
     if ($session.NativeSSH -eq $true) {
         Write-Log "Using native SSH for deployment to $($Device.Hostname)" -Level INFO
         try {
-            $result = Invoke-NativeSSHCommands -Host $session.Host -User $session.User -Password $session.Password -Port $session.Port -Commands $cmds -DelayPerCommand $CommandDelay
+            $result = Invoke-NativeSSHCommands -TargetHost $session.Host -User $session.User -Password $session.Password -Port $session.Port -Commands $cmds -DelayPerCommand $CommandDelay
             if ($result.Success) {
                 Write-Log "Deployment completed (native SSH) for $($Device.Hostname)" -Level INFO
                 Write-Log "[$($Device.Hostname)] Output: $($result.Output)" -Level DEBUG
