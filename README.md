@@ -390,6 +390,12 @@ NetDeploy/                              # Root directory
 │
 └── 📁 docs/                            # ← EXTRA DOCUMENTATIE
     └── PROJECT_REVIEW.md                   # Gedetailleerde code review en verbeteringen
+
+├── 📁 Tests/                           # ← UNIT TESTS (Pester 5)
+│   ├── Run-Tests.ps1                       # Test runner script
+│   ├── CommandBuilder.Tests.ps1            # 17 tests: wildcard/CIDR, router commands
+│   ├── DeviceLoader.Tests.ps1              # 18 tests: JSON parsing, device loading
+│   └── Validator.Tests.ps1                 # 29 tests: IP validatie, device validatie
 ```
 
 
@@ -575,6 +581,51 @@ Invoke-DeviceDeployment -Device $devices[0] -CommandDelay 1
 
 # Check backup
 Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+```
+
+---
+
+## 🧬 Unit Tests (Pester)
+
+Dit project bevat **64 unit tests** geschreven met [Pester 5](https://pester.dev/) voor de belangrijkste functies.
+
+### Vereisten
+
+```powershell
+# Installeer Pester (indien nog niet geïnstalleerd)
+Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+```
+
+### Tests Uitvoeren
+
+```powershell
+# Navigeer naar Tests folder
+cd Tests
+
+# Run alle tests
+./Run-Tests.ps1
+
+# Gedetailleerde output (toont alle individuele tests)
+./Run-Tests.ps1 -Detailed
+```
+
+### Test Coverage
+
+| Test File | Tests | Wat wordt getest |
+|-----------|-------|------------------|
+| `CommandBuilder.Tests.ps1` | 17 | Wildcard/CIDR conversie, Router commands, OSPF, AAA |
+| `DeviceLoader.Tests.ps1` | 18 | JSON laden, device parsing, error handling |
+| `Validator.Tests.ps1` | 29 | IP validatie, Router/Switch/Host validatie |
+| **Totaal** | **64** | |
+
+### Voorbeeld Output
+
+```
+Running discovery in 3 files.
+Discovery found 64 tests in 1.23s.
+Running tests.
+Tests completed in 2.45s
+Tests Passed: 64, Failed: 0, Skipped: 0
 ```
 
 ---
