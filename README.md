@@ -629,7 +629,7 @@ Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-O
 - https://chatgpt.com/share/6952a39e-ea04-800a-98d6-3e81ca7a8f26
 - https://chatgpt.com/share/6952a816-5128-800a-880f-27c8f5fc70f9
 - https://chatgpt.com/share/6952e3bc-3e44-800a-8a40-d8963f86d7dc
-#### copilot was used for debugging and refining functions like the logging, commandbuilidng, parallel dpeloyement and backup and backup vieuwing function. 
+#### copilot is gebruikt geweest voor het debugging en verfijnen van sommige functionaliteiten, onder andere voor de SHH fallback op KEX, de parallel deployment met throttle, en bij het vertalen van plain text naar cisco commandos in de commandbuilder.
 - Copilot Used: GPT-4.1, Claude Opus 4.5, Claud Sonnet 4.5, GPT-5, GPT-4
 
 
