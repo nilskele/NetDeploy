@@ -147,7 +147,7 @@ Voor gebruik in een lab/test omgeving:
 
 ---
 
-## 📥 Installatie
+## Installatie
 
 ### Stap 1: PowerShell 7 Installeren
 
@@ -329,7 +329,7 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun
 
 ---
 
-## 🏗️ Technische Structuur
+## Technische Structuur
 
 ### Project Overzicht - Waar Vind Ik Wat?
 
