@@ -5,7 +5,7 @@
 
 ---
 
-## 📋 Doel van het Project
+## Doel van het Project
 
 NetDeploy is een PowerShell-gebaseerde automatiseringstool ontwikkeld voor het deployen en valideren van configuraties op netwerkapparaten zoals switches, routers en servers.
 
@@ -21,27 +21,27 @@ Het stelt netwerkbeheerders in staat om:
 
 Dit project bevat **alle MVP functionaliteiten** zoals gedefinieerd in het projectvoorstel:
 
-✅ **1. Configuration Deployment via SSH**  
+**1. Configuration Deployment via SSH**  
 Automatisch verbinden met Cisco devices via PowerShell + Posh-SSH en configuraties pushen.
 
-✅ **2. Template Management**  
+**2. Template Management**  
 JSON templates laden en correct parsen voor elk device type (Router, Switch, Host).
 
-✅ **3. Connectivity Validation**  
+**3. Connectivity Validation**  
 Geautomatiseerde reachability checks (Test-Connection) na deployment.
 
-✅ **4. Text-Based User Interface (TUI)**  
+**4. Text-Based User Interface (TUI)**  
 Intuïtieve interface voor device selectie, progress monitoring en real-time resultaten.
 
-✅ **5. Logging and Reporting**  
+**5. Logging and Reporting**  
 Gestructureerde logs van alle deployment acties in CSV/text formaat voor auditing.
 
 ### Bonus Features (Beyond MVP)
 
-✅ **Backup and Rollback Mechanism** - Automatische backups vóór deployment, wel geen automatische rollback 
-✅ **Parallel Deployments** - Simultane deployment naar meerdere devices met aanpasbare throttle 
-✅ **Enhanced TUI Visual Feedback** - Color-coded status indicators  
-✅ **Native SSH Fallback** - Ondersteuning voor legacy Cisco devices met oude KEX algorithms  
+**Backup and Rollback Mechanism** - Automatische backups vóór deployment, wel geen automatische rollback 
+**Parallel Deployments** - Simultane deployment naar meerdere devices met aanpasbare throttle 
+**Enhanced TUI Visual Feedback** - Color-coded status indicators  
+**Native SSH Fallback** - Ondersteuning voor legacy Cisco devices met oude KEX algorithms  
 
 ### Ontwikkeld Voor
 
@@ -49,7 +49,7 @@ Dit project is ontwikkeld als onderdeel van een academische opdracht voor system
 
 ---
 
-## 🧪 Quick Start voor Testing
+## Quick Start voor Testing
 
 
 ### Optie A: Testen met Voorbeelddata (Zonder Netwerk)
@@ -122,7 +122,7 @@ Get-ChildItem ./logs/backups/
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
 ### Software Requirements
 
@@ -141,9 +141,9 @@ Voor gebruik in een lab/test omgeving:
 
 ### Ondersteunde Device Types
 
-- ✅ Cisco IOS Routers (interfaces, OSPF, static routes, NAT, DHCP, DNS, ACLs)
-- ✅ Cisco IOS Switches (VLANs, trunk/access ports, SVIs, STP, EtherChannel)
-- ✅ Linux/Unix Hosts (basis netwerk configuratie)
+- Cisco IOS Routers (interfaces, OSPF, static routes, NAT, DHCP, DNS, ACLs)
+- Cisco IOS Switches (VLANs, trunk/access ports, SVIs, STP, EtherChannel)
+- Linux/Unix Hosts (basis netwerk configuratie)
 
 ---
 
@@ -223,7 +223,7 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun
 
 ---
 
-## ⚙️ Configuratie
+## Configuratie
 
 ### Device Configuratie
 
@@ -296,7 +296,7 @@ Zie `examples/` directory voor volledige voorbeelden.
 
 ---
 
-## 🚀 Gebruik
+## Gebruik
 
 ### Methode 1: Interactive TUI
 
@@ -338,18 +338,18 @@ Invoke-DeviceDeployment -Device $devices[0] -DryRun
 ```
 NetDeploy/                              # Root directory
 │
-├── 📄 NetDeploy.psd1                   # Module manifest (metadata, versie, geëxporteerde functies)
-├── 📄 NetDeploy.psm1                   # Module loader (laadt automatisch alle Public/Private functies)
-├── 📄 README.md                        # Deze documentatie
-├── 📄 LICENSE                          # MIT licentie
+├── NetDeploy.psd1                   # Module manifest (metadata, versie, geëxporteerde functies)
+├── NetDeploy.psm1                   # Module loader (laadt automatisch alle Public/Private functies)
+├── README.md                        # Deze documentatie
+├── LICENSE                          # MIT licentie
 │
-├── 📁 Public/                          # ← PUBLIEKE API (4 functies geëxporteerd)
+├── Public/                          # - PUBLIEKE API (4 functies geëxporteerd)
 │   ├── Invoke-DeviceDeployment.ps1         # Deploy naar 1 device
 │   ├── Invoke-AllDeviceDeployment.ps1      # Deploy naar meerdere devices (sequential/parallel)
 │   ├── Load-Devices.ps1                    # Laad devices vanuit JSON
 │   └── Start-NetDeployUI.ps1               # Start de interactieve TUI
 │
-├── 📁 Private/                         # ← INTERNE FUNCTIES (niet geëxporteerd)
+├── Private/                         # - INTERNE FUNCTIES (niet geëxporteerd)
 │   ├── Utils.ps1                           # Logging, validatie, helpers (13 functies)
 │   │                                       #   → Write-Log, New-LogJob, Convert-MaskToWildcard, etc.
 │   ├── DeviceLoader.ps1                    # JSON/PSD1 parsing (5 functies)
@@ -362,36 +362,36 @@ NetDeploy/                              # Root directory
 │                                           #   → Connect-SSH, Backup-DeviceConfig, Deploy-Device
 │                                           #   → Native SSH fallback functies voor legacy devices
 │
-├── 📁 tui/                             # ← TEXT USER INTERFACE (TUI)
+├── tui/                             # - TEXT USER INTERFACE (TUI)
 │   ├── DeploymentUI.ps1                    # Main TUI logic en workflow
 │   ├── Menu.ps1                            # Menu rendering en backup viewer
 │   └── DeviceSelector.ps1                  # Device selectie logic
 │
-├── 📁 configs/                         # ← CONFIGURATIE BESTANDEN
+├── configs/                         # - CONFIGURATIE BESTANDEN
 │   ├── devices/
-│   │   └── devices.json                    # ← HOOFDBESTAND: Alle devices configuratie (JSON)
+│   │   └── devices.json                    # - HOOFDBESTAND: Alle devices configuratie (JSON)
 │   └── base-configs/                       # Manual backup configs (voor disaster recovery)
 │       ├── R1-base.txt
 │       ├── R2-base.txt
 │       └── S1-base-config.txt
 │
-├── 📁 examples/                        # ← VOORBEELD CONFIGURATIES (voor referentie)
+├── examples/                        # - VOORBEELD CONFIGURATIES (voor referentie)
 │   ├── router-example.psd1                 # Volledig voorbeeld: Router met OSPF, NAT, DHCP
 │   ├── switch-example.psd1                 # Volledig voorbeeld: Switch met VLANs, trunking
 │   └── host-example.psd1                   # Volledig voorbeeld: Linux host configuratie
 │
-├── 📁 logs/                            # ← RUNTIME LOGS (automatisch aangemaakt)
+├── logs/                            # - RUNTIME LOGS (automatisch aangemaakt)
 │   ├── NetDeploy-YYYYMMDD.log             # Dagelijkse algemene log
 │   ├── execution.log                       # Legacy execution log
 │   ├── jobs/                               # Per-deployment logs met timestamp
 │   │   └── <RunName>-<timestamp>.log
-│   └── backups/                            # ← DEVICE BACKUPS (automatisch bij deployment)
+│   └── backups/                            # - DEVICE BACKUPS (automatisch bij deployment)
 │       └── <hostname>-<timestamp>.cfg      # Bijv: R1-20260101-143022.cfg
 │
-└── 📁 docs/                            # ← EXTRA DOCUMENTATIE
+└── docs/                            # - EXTRA DOCUMENTATIE
     └── PROJECT_REVIEW.md                   # Gedetailleerde code review en verbeteringen
 
-├── 📁 Tests/                           # ← UNIT TESTS (Pester 5)
+├── Tests/                           # - UNIT TESTS (Pester 5)
 │   ├── Run-Tests.ps1                       # Test runner script
 │   ├── CommandBuilder.Tests.ps1            # 17 tests: wildcard/CIDR, router commands
 │   ├── DeviceLoader.Tests.ps1              # 18 tests: JSON parsing, device loading
@@ -443,7 +443,7 @@ NetDeploy/                              # Root directory
 
 ---
 
-## 🧪 Testing Instructies
+## Testing Instructies
 
 ### Module Importeren en Verificatie
 
@@ -585,7 +585,7 @@ Get-ChildItem ./logs/backups/ | Sort-Object LastWriteTime -Descending | Select-O
 
 ---
 
-## 🧬 Unit Tests (Pester)
+## Unit Tests (Pester)
 
 Dit project bevat **64 unit tests** geschreven met [Pester 5](https://pester.dev/) voor de belangrijkste functies.
 
@@ -630,7 +630,7 @@ Tests Passed: 64, Failed: 0, Skipped: 0
 
 ---
 
-## 📝 Design Patterns
+## Design Patterns
 
 1. **Module Pattern** - Public/Private scheiding
 2. **Template Method** - Device-specific builders
@@ -639,7 +639,7 @@ Tests Passed: 64, Failed: 0, Skipped: 0
 
 ---
 
-## 📚 Gebruikte Bronnen
+## Gebruikte Bronnen
 
 ### Officiële Documentatie
 
@@ -684,7 +684,7 @@ Tests Passed: 64, Failed: 0, Skipped: 0
 - Copilot Used: GPT-4.1, Claude Opus 4.5, Claud Sonnet 4.5, GPT-5, GPT-4
 
 
-## 👤 Auteur
+## Auteur
 
 **Nils Kelecom**  
 Student Toegepaste Informatica - Erasmushogeschool Brussel  
